@@ -10,10 +10,10 @@ export function useEncabezado(): { titulo: string; volverA: string | null } {
   const remision = matchPath('/registros/:id/remision', pathname)
   if (remision) return { titulo: `Remisión ${codigo(remision.params.id)}`, volverA: `/registros/${remision.params.id}` }
   const editar = matchPath('/registros/:id/editar', pathname)
-  if (editar) return { titulo: `Editar registro ${codigo(editar.params.id)}`, volverA: '/' }
+  if (editar) return { titulo: `Editar lote ${codigo(editar.params.id)}`, volverA: '/' }
   const detalle = matchPath('/registros/:id', pathname)
-  if (detalle) return { titulo: `Registro ${codigo(detalle.params.id)}`, volverA: '/' }
-  if (pathname === '/nuevo') return { titulo: 'Nuevo registro', volverA: '/' }
+  if (detalle) return { titulo: `Lote ${codigo(detalle.params.id)}`, volverA: '/' }
+  if (pathname === '/nuevo') return { titulo: 'Nuevo lote', volverA: '/' }
   if (pathname.startsWith('/clientes')) return { titulo: 'Clientes', volverA: null }
   if (pathname.startsWith('/configuracion')) return { titulo: 'Configuración', volverA: null }
   return { titulo: 'Registros', volverA: null }

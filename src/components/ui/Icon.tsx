@@ -8,6 +8,8 @@ const trazos = {
   config: <><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" /></>,
   menu: <path d="M4 6h16M4 12h16M4 18h16" />,
   atras: <path d="M15 18l-6-6 6-6" />,
+  adelante: <path d="M9 18l6-6-6-6" />,
+  check: <path d="M5 12l5 5L20 7" />,
   cerrar: <path d="M6 6l12 12M18 6L6 18" />,
   buscar: <><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></>,
   abajo: <path d="M6 9l6 6 6-6" />,

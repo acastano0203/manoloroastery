@@ -15,12 +15,9 @@ function Dato({ label, valor, formula }: { label: string; valor: string; formula
 export function ResumenCobroBar({ f }: { f: RegistroFormApi }) {
   const { cobro: c, formMsg, guardando, guardar, guardarTxt } = f
   const botones = (
-    <>
-      <Button variant="secondary" size="xl" onClick={() => guardar(false)} disabled={guardando}>{guardarTxt}</Button>
-      <Button size="xl" onClick={() => guardar(true)} disabled={guardando} className="flex-1 font-bold">
-        {guardando ? 'Guardando…' : 'Guardar y enviar'}
-      </Button>
-    </>
+    <Button size="xl" onClick={() => void guardar()} disabled={guardando} className="flex-1 font-bold">
+      {guardando ? 'Guardando…' : guardarTxt}
+    </Button>
   )
   const mensaje = formMsg && (
     <div role="status" className="rounded-lg bg-red-100 px-3 py-1.5 text-center text-[15px] font-semibold text-red-800">{formMsg}</div>
@@ -42,7 +39,7 @@ export function ResumenCobroBar({ f }: { f: RegistroFormApi }) {
         </div>
         <div className="text-[13px] text-cafe-suave">{c?.fTotal}</div>
         {mensaje}
-        <div className="grid grid-cols-[1fr_1.6fr] gap-2">{botones}</div>
+        <div className="flex gap-2">{botones}</div>
       </div>
 
       {/* escritorio */}

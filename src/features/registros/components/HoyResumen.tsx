@@ -15,7 +15,7 @@ export function HoyResumen() {
     <section aria-label="Totales del día" className="flex flex-col gap-3">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <h2 className="m-0 text-lg font-bold">Hoy · {hoy.fecha}</h2>
-        <div className="text-[15px] text-cafe-suave">{hoy.count} registros</div>
+        <div className="text-[15px] text-cafe-suave">{hoy.count} {hoy.count === 1 ? 'lote' : 'lotes'}</div>
       </div>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Dato label="Libras tostadas" valor={hoy.libras} grande />

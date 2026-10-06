@@ -6,7 +6,7 @@ import { PageHeading } from '../components/ui/PageHeading'
 import { AvisoRegistros } from '../features/registros/components/AvisoRegistros'
 import { Historial } from '../features/registros/components/Historial'
 import { HoyResumen } from '../features/registros/components/HoyResumen'
-import { RegistrosCreados } from '../features/registros/components/RegistrosCreados'
+import { LotesPorEtapa } from '../features/registros/components/LotesPorEtapa'
 import { useRegistros } from '../features/registros/hooks/useRegistros'
 
 export function RegistrosPage() {
@@ -20,7 +20,7 @@ export function RegistrosPage() {
             <div className="hidden md:block">
               <Link to="/nuevo" className={buttonClass('primary', 'lg', 'px-6 text-[17px]')}>
                 <Icon name="mas" />
-                Nuevo registro
+                Nuevo lote
               </Link>
             </div>
           }
@@ -29,7 +29,7 @@ export function RegistrosPage() {
         {cargando ? <Loading /> : (
           <>
             <HoyResumen />
-            <RegistrosCreados />
+            <LotesPorEtapa />
             <Historial />
           </>
         )}
@@ -37,7 +37,7 @@ export function RegistrosPage() {
       <div className="sticky bottom-0 border-t border-arena bg-crema px-4 pb-4 pt-3 md:hidden">
         <Link to="/nuevo" className={buttonClass('primary', 'xxl', 'w-full font-bold')}>
           <Icon name="mas" size={24} />
-          Nuevo registro
+          Nuevo lote
         </Link>
       </div>
     </>

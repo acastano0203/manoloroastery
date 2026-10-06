@@ -7,6 +7,8 @@ type Enums = Database['public']['Enums']
 export type Estado = Enums['estado_envio']
 export type Pago = Enums['forma_pago']
 export type Proceso = Enums['proceso_cafe']
+export type Etapa = Enums['etapa_lote']
+export type Llegada = Enums['llegada_cafe']
 
 export const PAGOS: readonly Pago[] = ['Efectivo', 'Banco', 'Bold']
 export const PROCESOS: readonly Proceso[] = ['Pergamino', 'Natural', 'Honey', 'Cofermentado']
@@ -33,7 +35,11 @@ export interface RegistroDatos extends CantidadBolsas, DatosFactura {
 export interface Registro extends RegistroDatos {
   id: string
   codigo: string
+  /** Estado de envío a contabilidad (Siigo), aparte de la etapa del lote. */
   estado: Estado
+  etapa: Etapa
+  /** Pergamino pasa por trilla; Verde se la salta. Vacío en registros viejos. */
+  llegada: Llegada | null
   /** Precios con los que se cobró este registro. */
   precios: Precios
 }
@@ -43,6 +49,8 @@ export interface Aviso {
   text: string
   /** Si viene, el aviso muestra el botón "Ver remisión". */
   registroId?: string
+  /** Si viene, el aviso muestra el botón "Deshacer" que regresa el lote a esa etapa. */
+  deshacer?: { id: string; etapa: Etapa }
 }
 
 /** Resultado de calcular el cobro de un registro. */

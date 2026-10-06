@@ -4,7 +4,7 @@ import { Icon, type IconName } from '../ui/Icon'
 
 const ITEMS: Array<{ to: string; label: string; icon: IconName; activo: (path: string) => boolean }> = [
   { to: '/', label: 'Registros', icon: 'lista', activo: (p) => p === '/' || (p.startsWith('/registros/') && !p.endsWith('/editar')) },
-  { to: '/nuevo', label: 'Nuevo registro', icon: 'nuevo', activo: (p) => p === '/nuevo' || p.endsWith('/editar') },
+  { to: '/nuevo', label: 'Nuevo lote', icon: 'nuevo', activo: (p) => p === '/nuevo' || p.endsWith('/editar') },
   { to: '/clientes', label: 'Clientes', icon: 'usuarios', activo: (p) => p.startsWith('/clientes') },
   { to: '/configuracion', label: 'Configuración', icon: 'config', activo: (p) => p.startsWith('/configuracion') },
 ]

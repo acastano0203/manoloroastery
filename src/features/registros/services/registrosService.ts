@@ -1,7 +1,7 @@
 import { supabase } from '../../../lib/supabase'
 import type { Database } from '../../../types/database'
 import type { Precios } from '../../configuracion/types'
-import type { Estado, Registro, RegistroDatos } from '../types'
+import type { Estado, Etapa, Registro, RegistroDatos } from '../types'
 
 type Fila = Database['public']['Tables']['lotes']['Row']
 
@@ -24,6 +24,8 @@ const aRegistro = (f: Fila): Registro => ({
   n500: f.n500,
   n2500: f.n2500,
   estado: f.estado,
+  etapa: f.etapa,
+  llegada: f.llegada,
   precios: { lb: f.precio_lb, p340: f.precio_340, p500: f.precio_500, p2500: f.precio_2500 },
 })
 
@@ -82,6 +84,13 @@ export async function actualizarRegistro(id: string, datos: RegistroDatos, preci
 export async function cambiarEstado(id: string, estado: Estado): Promise<void> {
   const cambios = estado === 'Enviado' ? { estado, enviado_at: new Date().toISOString() } : { estado }
   const { error } = await supabase.from('lotes').update(cambios).eq('id', id)
+  if (error) throw error
+}
+
+/** Mueve el lote de etapa. Al entregar guarda la hora; si se devuelve, la borra. */
+export async function cambiarEtapa(id: string, etapa: Etapa): Promise<void> {
+  const entregado_at = etapa === 'Entregado' ? new Date().toISOString() : null
+  const { error } = await supabase.from('lotes').update({ etapa, entregado_at }).eq('id', id)
   if (error) throw error
 }
 

@@ -21,7 +21,7 @@ export function ClienteItem({ cliente: k, nRegistros, onEditar, onEliminar }: Pr
         <span className="text-[17px] font-semibold">{k.nombre}</span>
         <span className="text-[15px] text-cafe-suave tabular-nums">{cel(k.celular)} · {factura}</span>
       </div>
-      <div className="min-w-[90px] text-sm text-cafe-suave">{nRegistros} {nRegistros === 1 ? 'registro' : 'registros'}</div>
+      <div className="min-w-[90px] text-sm text-cafe-suave">{nRegistros} {nRegistros === 1 ? 'lote' : 'lotes'}</div>
       {confirmando ? (
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="text-[15px] font-semibold text-red-800">¿Eliminar cliente?</span>

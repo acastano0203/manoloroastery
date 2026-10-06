@@ -44,7 +44,7 @@ export function ConfigForm() {
     setGuardando(true)
     try {
       await guardar({ ...config, precios, siigoUsuario: usuario })
-      setMsg({ kind: 'ok', text: 'Configuración guardada. Los nuevos precios aplican a los registros nuevos.' })
+      setMsg({ kind: 'ok', text: 'Configuración guardada. Los nuevos precios aplican a los lotes nuevos.' })
     } catch (e) {
       setMsg({ kind: 'error', text: mensajeError(e) })
     } finally {

@@ -13,7 +13,7 @@ import { useRegistros } from './useRegistros'
 
 /** Estado, validación y guardado del formulario de registro (nuevo o edición). */
 export function useRegistroForm(registroId?: string) {
-  const { registros, recargar, setAviso, enviar } = useRegistros()
+  const { registros, recargar, setAviso } = useRegistros()
   const { crear: crearCliente, actualizar: actualizarCliente } = useClientes()
   const { config } = useConfig()
   const navigate = useNavigate()
@@ -56,7 +56,7 @@ export function useRegistroForm(registroId?: string) {
     ? `Es más de lo recibido (${dec(k * 1000, 0)} g). Revisa las cantidades.`
     : null
 
-  async function guardar(enviarDespues: boolean) {
+  async function guardar() {
     const n = Object.keys(todos).length
     if (n) {
       setIntentado(true)
@@ -82,13 +82,8 @@ export function useRegistroForm(registroId?: string) {
         ? await actualizarRegistro(registroId, datos, config.precios)
         : await crearRegistro(datos, config.precios)
       await recargar()
-      if (enviarDespues) {
-        navigate(`/registros/${r.id}`)
-        void enviar(r.id)
-      } else {
-        setAviso({ kind: 'ok', text: `${registroId ? 'Cambios guardados en ' : 'Registro guardado: '}${r.cliente}. Está en Registros creados.` })
-        navigate('/')
-      }
+      setAviso({ kind: 'ok', text: registroId ? `Cambios guardados en ${r.cliente}.` : `Lote ${r.codigo} guardado: ${r.cliente}. Está en ${r.etapa}.` })
+      navigate(registroId ? `/registros/${r.id}` : '/')
     } catch (e) {
       setFormMsg(mensajeError(e))
     } finally {
@@ -102,8 +97,8 @@ export function useRegistroForm(registroId?: string) {
     listo,
     noEncontrado: Boolean(registroId) && !existente,
     bloqueado: existente ? !esEditable(existente) : false,
-    titulo: existente ? `Editar registro ${existente.codigo}` : 'Nuevo registro',
-    guardarTxt: registroId ? 'Guardar cambios' : 'Guardar',
+    titulo: existente ? `Editar lote ${existente.codigo}` : 'Nuevo lote',
+    guardarTxt: registroId ? 'Guardar cambios' : 'Guardar lote',
   }
 }
 

@@ -16,11 +16,11 @@ const cajas: Record<Estado, { caja: string; punto: string; titulo: string }> = {
 function texto(r: Registro) {
   if (r.estado === 'Error') {
     return r.factura && !r.numDoc
-      ? 'Falta el número de documento para la factura. Edita el registro y reenvía.'
+      ? 'Falta el número de documento para la factura. Edita el lote y reenvía.'
       : 'No se pudo enviar. Intenta de nuevo.'
   }
   if (r.estado === 'Enviando') return 'Esperando respuesta.'
-  if (r.estado === 'Pendiente') return 'Este registro aún no se ha enviado.'
+  if (r.estado === 'Pendiente') return 'Falta enviarlo a contabilidad. Después se comparte la remisión.'
   return 'Ya puedes compartir la remisión con el cliente.'
 }
 

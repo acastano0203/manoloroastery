@@ -2,8 +2,9 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { mensajeError } from '../../../lib/errores'
 import { suscribirCambios } from '../../../lib/realtime'
 import { enviarRegistroASiigo } from '../../configuracion/services/siigoService'
-import { cambiarEstado, eliminarRegistro, listarRegistros, obtenerRegistro } from '../services/registrosService'
-import type { Aviso, Registro } from '../types'
+import { etapaAnterior, siguienteEtapa } from '../etapas'
+import { cambiarEstado, cambiarEtapa, eliminarRegistro, listarRegistros, obtenerRegistro } from '../services/registrosService'
+import type { Aviso, Etapa, Registro } from '../types'
 
 interface RegistrosValue {
   registros: Registro[]
@@ -15,6 +16,12 @@ interface RegistrosValue {
   setAviso: (a: Aviso | null) => void
   enviar: (id: string) => Promise<void>
   eliminar: (r: Registro) => Promise<void>
+  /** Pasa el lote a la etapa siguiente (con "Deshacer" en el aviso). */
+  avanzar: (r: Registro) => Promise<void>
+  /** Devuelve el lote a la etapa anterior. */
+  regresar: (r: Registro) => Promise<void>
+  /** Pone el lote en una etapa (lo usa "Deshacer"). */
+  moverA: (id: string, etapa: Etapa) => Promise<void>
 }
 
 const RegistrosContext = createContext<RegistrosValue | null>(null)
@@ -67,6 +74,30 @@ export function RegistrosProvider({ children }: { children: ReactNode }) {
     }
   }, [recargar])
 
+  const moverA = useCallback(async (id: string, etapa: Etapa) => {
+    setAviso(null)
+    try {
+      await cambiarEtapa(id, etapa)
+    } catch (e) {
+      setAviso({ kind: 'error', text: mensajeError(e) })
+    }
+    await recargar()
+  }, [recargar])
+
+  const avanzar = useCallback(async (r: Registro) => {
+    const etapa = siguienteEtapa(r)
+    if (!etapa) return
+    await moverA(r.id, etapa)
+    setAviso((a) => a ?? { kind: 'ok', text: `${r.cliente} (${r.codigo}) pasó a ${etapa}.`, deshacer: { id: r.id, etapa: r.etapa } })
+  }, [moverA])
+
+  const regresar = useCallback(async (r: Registro) => {
+    const etapa = etapaAnterior(r)
+    if (!etapa) return
+    await moverA(r.id, etapa)
+    setAviso((a) => a ?? { kind: 'neutral', text: `${r.cliente} (${r.codigo}) volvió a ${etapa}.`, deshacer: { id: r.id, etapa: r.etapa } })
+  }, [moverA])
+
   const eliminar = useCallback(async (r: Registro) => {
     try {
       await eliminarRegistro(r.id)
@@ -84,7 +115,7 @@ export function RegistrosProvider({ children }: { children: ReactNode }) {
   )
 
   return (
-    <RegistrosContext.Provider value={{ registros, cargando, error, recargar, aviso, setAviso, enviar, eliminar }}>
+    <RegistrosContext.Provider value={{ registros, cargando, error, recargar, aviso, setAviso, enviar, eliminar, avanzar, regresar, moverA }}>
       {children}
     </RegistrosContext.Provider>
   )

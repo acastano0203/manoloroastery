@@ -3,6 +3,8 @@ import { buttonClass } from '../../../components/ui/buttonClass'
 import { Icon } from '../../../components/ui/Icon'
 import { Loading } from '../../../components/ui/Loading'
 import { PageHeading } from '../../../components/ui/PageHeading'
+import { Link } from 'react-router-dom'
+import { estaEntregado } from '../../registros/etapas'
 import { useRegistros } from '../../registros/hooks/useRegistros'
 import type { Registro } from '../../registros/types'
 import { useRemision } from '../hooks/useRemision'
@@ -15,7 +17,7 @@ function Remision({ r }: { r: Registro }) {
   const { datos } = rem
   return (
     <main className="mx-auto flex w-full max-w-[1080px] flex-1 flex-col gap-4 px-3 pb-32 pt-6 md:pb-8">
-      <PageHeading title={`Remisión ${r.codigo}`} back={{ to: `/registros/${r.id}`, label: 'Detalle del registro' }} />
+      <PageHeading title={`Remisión ${r.codigo}`} back={{ to: `/registros/${r.id}`, label: 'Detalle del lote' }} />
       <div className="flex flex-wrap items-start gap-6">
         <section aria-label="PDF de la remisión" className="flex min-w-0 flex-[1_1_420px] flex-col gap-2.5">
           <div className="flex items-center justify-between gap-3">
@@ -55,6 +57,14 @@ export function RemisionVista({ id }: { id: string }) {
   const { registros, cargando } = useRegistros()
   const r = registros.find((x) => x.id === id)
   if (cargando) return <Loading />
-  if (!r) return <main className="p-6"><Alert kind="error">No se encontró el registro.</Alert></main>
+  if (!r) return <main className="p-6"><Alert kind="error">No se encontró el lote.</Alert></main>
+  if (!estaEntregado(r) || r.estado !== 'Enviado') {
+    return (
+      <main className="mx-auto flex w-full max-w-[720px] flex-col gap-4 p-6">
+        <Alert kind="neutral">La remisión se comparte cuando el lote está entregado y enviado a contabilidad.</Alert>
+        <Link to={`/registros/${r.id}`} className={buttonClass('primary', 'xl', 'font-bold')}>Ver el lote</Link>
+      </main>
+    )
+  }
   return <Remision r={r} />
 }

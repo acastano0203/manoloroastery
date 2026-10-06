@@ -5,13 +5,13 @@ import { useRegistros } from './useRegistros'
 export type Rango = 'hoy' | 'ayer' | 'semana' | 'todo'
 export const RANGOS: ReadonlyArray<[Rango, string]> = [['hoy', 'Hoy'], ['ayer', 'Ayer'], ['semana', '7 días'], ['todo', 'Todo']]
 
-/** Registros ya enviados, filtrados por fecha y nombre de cliente. */
+/** Lotes entregados y enviados a contabilidad, filtrados por fecha y nombre de cliente. */
 export function useHistorial() {
   const { registros } = useRegistros()
   const [rango, setRango] = useState<Rango>('semana')
   const [q, setQ] = useState('')
 
-  const enviados = useMemo(() => registros.filter((r) => r.estado === 'Enviado'), [registros])
+  const enviados = useMemo(() => registros.filter((r) => r.etapa === 'Entregado' && r.estado === 'Enviado'), [registros])
 
   const lista = useMemo(() => {
     const ayer = hoyISO(-1)
@@ -23,6 +23,6 @@ export function useHistorial() {
     })
   }, [enviados, rango, q])
 
-  const vacioTxt = enviados.length ? 'No hay registros con estos filtros.' : 'Aún no hay registros enviados.'
+  const vacioTxt = enviados.length ? 'No hay lotes con estos filtros.' : 'Aún no hay lotes entregados y enviados.'
   return { lista, rango, setRango, q, setQ, vacioTxt }
 }

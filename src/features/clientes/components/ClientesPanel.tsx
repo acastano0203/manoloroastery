@@ -41,7 +41,7 @@ export function ClientesPanel() {
 
   async function borrar(k: Cliente) {
     const n = usos.get(k.id) ?? 0
-    if (n) return setMsg({ kind: 'error', text: `${k.nombre} tiene ${n} registros. No se puede eliminar.` })
+    if (n) return setMsg({ kind: 'error', text: `${k.nombre} tiene ${n} lotes. No se puede eliminar.` })
     try {
       await eliminar(k.id)
       setMsg({ kind: 'ok', text: `Cliente ${k.nombre} eliminado.` })
@@ -89,7 +89,7 @@ export function ClientesPanel() {
           ))}
           {lista.length === 0 && (
             <div className="px-4 py-6 text-center text-cafe-suave">
-              {clientes.length ? 'No hay clientes con esa búsqueda.' : 'Aún no hay clientes. Crea el primero con «Nuevo cliente» o desde el formulario de registro.'}
+              {clientes.length ? 'No hay clientes con esa búsqueda.' : 'Aún no hay clientes. Crea el primero con «Nuevo cliente» o desde «Nuevo lote».'}
             </div>
           )}
         </div>
