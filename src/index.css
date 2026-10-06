@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+/* Colores y fuente del diseño "Registro de tostión" (Don Manolo) */
+@theme {
+  --font-sans: 'Public Sans', system-ui, sans-serif;
+
+  --color-crema: #F4ECD8;        /* fondo de la app */
+  --color-crema-claro: #FAF4E6;  /* encabezados de tabla, prefijos */
+  --color-panel: #FBF4E4;        /* panel "Café a tostar" */
+  --color-trigo: #F3E5C8;        /* seleccionado suave, total de remisión */
+  --color-arena: #E9DCC0;        /* bordes de tarjetas */
+  --color-arena-oscuro: #E2D2AE; /* bordes de opciones */
+  --color-dorado: #C8A46E;       /* bordes de campos, acento */
+  --color-dorado-oscuro: #9C7A44;
+  --color-vino: #7B1E22;         /* marca, botón principal */
+  --color-vino-oscuro: #5E161A;
+  --color-cafe: #2B1A12;         /* texto */
+  --color-cafe-medio: #4A3426;
+  --color-cafe-suave: #6B5444;   /* texto secundario */
+  --color-peligro: #B42318;
+  --color-whatsapp: #ECE5DD;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    margin: 0;
+    background: var(--color-crema);
+    color: var(--color-cafe);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.45;
+  }
+  input, select, button, textarea {
+    font: inherit;
+    color: inherit;
+  }
+  button:not(:disabled) {
+    cursor: pointer;
+  }
+  button:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+  :focus-visible {
+    outline: 3px solid var(--color-dorado);
+    outline-offset: 2px;
+  }
+  dl, dd {
+    margin: 0;
+  }
+}
