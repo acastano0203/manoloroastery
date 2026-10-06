@@ -35,7 +35,7 @@ export function DatosRegistro({ r }: { r: Registro }) {
           <Dato label="Kilos recibidos" valor={`${kg(r.kilos)} kg`} />
           <Dato label="Café a tostar" valor={`${dec(r.gramos, 0)} g`} />
           <Dato label="Bolsas" valor={describirBolsas(r)} />
-          <Dato label="Forma de pago" valor={r.pago} />
+          <Dato label="Forma de pago" valor={r.pago ?? 'Sin dato'} />
         </dl>
       </Card>
     </div>

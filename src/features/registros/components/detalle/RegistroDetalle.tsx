@@ -27,7 +27,7 @@ export function RegistroDetalle({ id }: { id: string }) {
         subtitle={`Registro ${r.codigo} · ${fecha(r.fecha, true)}`} />
       {aviso?.kind === 'error' && <AvisoRegistros />}
       <EstadoEnvio r={r} />
-      <CobroResumen c={calcularCobro(r, r.precios)} pago={r.pago} />
+      <CobroResumen c={calcularCobro(r, r.precios)} pago={r.pago ?? 'Sin dato'} />
       <DatosRegistro r={r} />
       <div className="flex flex-wrap gap-2">
         {esEditable(r) && (

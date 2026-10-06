@@ -1,6 +1,6 @@
 import { supabase } from './supabase'
 
-type Tabla = 'clientes' | 'registros' | 'configuracion'
+type Tabla = 'clientes' | 'lotes' | 'tostiones' | 'pagos' | 'configuracion'
 
 /** Llama a `alCambiar` cada vez que otra pantalla o dispositivo cambia la tabla. Devuelve la función para cancelar. */
 export function suscribirCambios(tabla: Tabla, alCambiar: () => void) {

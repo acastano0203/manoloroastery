@@ -3,7 +3,7 @@ import type { Database } from '../../../types/database'
 import type { Precios } from '../../configuracion/types'
 import type { Estado, Registro, RegistroDatos } from '../types'
 
-type Fila = Database['public']['Tables']['registros']['Row']
+type Fila = Database['public']['Tables']['lotes']['Row']
 
 const aRegistro = (f: Fila): Registro => ({
   id: f.id,
@@ -50,19 +50,19 @@ const aFila = (d: RegistroDatos, p: Precios) => ({
 })
 
 export async function listarRegistros(): Promise<Registro[]> {
-  const { data, error } = await supabase.from('registros').select('*').order('numero', { ascending: false })
+  const { data, error } = await supabase.from('lotes').select('*').order('numero', { ascending: false })
   if (error) throw error
   return data.map(aRegistro)
 }
 
 export async function obtenerRegistro(id: string): Promise<Registro> {
-  const { data, error } = await supabase.from('registros').select('*').eq('id', id).single()
+  const { data, error } = await supabase.from('lotes').select('*').eq('id', id).single()
   if (error) throw error
   return aRegistro(data)
 }
 
 export async function crearRegistro(datos: RegistroDatos, precios: Precios): Promise<Registro> {
-  const { data, error } = await supabase.from('registros').insert(aFila(datos, precios)).select().single()
+  const { data, error } = await supabase.from('lotes').insert(aFila(datos, precios)).select().single()
   if (error) throw error
   return aRegistro(data)
 }
@@ -70,7 +70,7 @@ export async function crearRegistro(datos: RegistroDatos, precios: Precios): Pro
 /** Guarda cambios. Vuelve a "Pendiente" porque cambió lo que se va a enviar. */
 export async function actualizarRegistro(id: string, datos: RegistroDatos, precios: Precios): Promise<Registro> {
   const { data, error } = await supabase
-    .from('registros')
+    .from('lotes')
     .update({ ...aFila(datos, precios), estado: 'Pendiente' })
     .eq('id', id)
     .select()
@@ -81,11 +81,11 @@ export async function actualizarRegistro(id: string, datos: RegistroDatos, preci
 
 export async function cambiarEstado(id: string, estado: Estado): Promise<void> {
   const cambios = estado === 'Enviado' ? { estado, enviado_at: new Date().toISOString() } : { estado }
-  const { error } = await supabase.from('registros').update(cambios).eq('id', id)
+  const { error } = await supabase.from('lotes').update(cambios).eq('id', id)
   if (error) throw error
 }
 
 export async function eliminarRegistro(id: string): Promise<void> {
-  const { error } = await supabase.from('registros').delete().eq('id', id)
+  const { error } = await supabase.from('lotes').delete().eq('id', id)
   if (error) throw error
 }

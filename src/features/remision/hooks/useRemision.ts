@@ -13,7 +13,7 @@ function datosDe(r: Registro): DatosRemision {
   }
   return {
     codigo: r.codigo, fechaLarga: fecha(r.fecha, true), cliente: r.cliente, celularTxt: cel(r.celular), proceso: r.proceso,
-    kilosTxt: `${kg(r.kilos)} kg`, gramosTxt: `${dec(r.gramos, 0)} g`, pago: r.pago, cobro, lineas,
+    kilosTxt: `${kg(r.kilos)} kg`, gramosTxt: `${dec(r.gramos, 0)} g`, pago: r.pago ?? 'Sin dato', cobro, lineas,
   }
 }
 
@@ -25,7 +25,7 @@ export function useRemision(r: Registro) {
 
   const texto = `Hola, ${r.cliente}. Te envío en PDF la remisión ${r.codigo} de tu tostión del ${datos.fechaLarga}: ` +
     `${datos.gramosTxt} (${datos.cobro.librasTxt})${datos.cobro.nb ? ' + ' + describirBolsas(r).toLowerCase() : ''}. ` +
-    `Total: ${datos.cobro.totalTxt}, pagado por ${r.pago}.`
+    `Total: ${datos.cobro.totalTxt}, pagado por ${datos.pago}.`
   const pdfName = `Remision-${r.codigo}.pdf`
   const waUrl = `https://wa.me/57${r.celular.replace(/\D/g, '')}?text=${encodeURIComponent(texto)}`
 

@@ -23,7 +23,8 @@ export interface RegistroDatos extends CantidadBolsas, DatosFactura {
   fecha: string
   cliente: string
   celular: string
-  pago: Pago
+  /** Forma de pago de los registros viejos; los abonos nuevos van en la tabla pagos. */
+  pago: Pago | null
   proceso: Proceso
   kilos: number
   gramos: number

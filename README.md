@@ -21,7 +21,7 @@ Stack: Vite + React + TypeScript, Tailwind CSS v4, React Router, Supabase (base 
    npx supabase link --project-ref <id-del-proyecto>
    npx supabase db push
    ```
-   (O pega `supabase/migrations/20261006000000_init.sql` en el SQL Editor de Supabase.)
+   (O pega en el SQL Editor de Supabase, en orden, cada archivo de `supabase/migrations/`.)
 4. Crea los usuarios del equipo en Supabase › Authentication › Users (correo + contraseña) y desactiva los registros públicos en Authentication › Sign In / Providers (*Allow new users to sign up*).
 5. Regenera los tipos (opcional, `src/types/database.ts` ya está escrito a mano según la migración):
    ```bash
@@ -37,10 +37,21 @@ Stack: Vite + React + TypeScript, Tailwind CSS v4, React Router, Supabase (base 
 | Tabla | Qué guarda |
 | --- | --- |
 | `clientes` | Nombre, celular, datos de factura electrónica. Código `C-001`. |
-| `registros` | Una tostión: cliente, café recibido, gramos a tostar, bolsas, forma de pago, estado de envío y **los precios vigentes al guardar** (si después cambian los precios, los cobros pasados no cambian). Código `R-0001`. |
-| `configuracion` | Una sola fila: precio por libra, precios de bolsas y usuario API de Siigo. |
+| `lotes` | El café de un cliente y su avance por etapas (Recibido → Trillado → Tostado → Empacado → Entregado): recepción, trilla, bolsas, entrega, estado de envío a Siigo y **los precios vigentes al guardar** (si después cambian los precios, los cobros pasados no cambian). Código `L-0001`. Antes se llamaba `registros`. |
+| `tostiones` | Los baches de tostión de cada lote: gramos de entrada y salida, tiempos, curva de Artisan o foto. |
+| `pagos` | Abonos de cada lote: fecha, valor y método (Efectivo, Banco, Bold). |
+| `configuracion` | Una sola fila: precios, rangos de alerta (humedad, trilla, merma), costo de gas por bache y usuario API de Siigo. |
 
-Todas con RLS: cualquier usuario con sesión iniciada ve y edita los datos del equipo; `user_id` guarda quién creó cada fila. Un registro enviado ya no se puede editar ni borrar (lo bloquea la base de datos). Las tablas están en tiempo real: lo que se guarda en el computador aparece al instante en el celular.
+Fotos y archivos de curva van en la carpeta privada `lotes` de Supabase Storage.
+
+Todas con RLS: cualquier usuario con sesión iniciada ve y edita los datos del equipo; `user_id` guarda quién creó cada fila. Un lote enviado a Siigo sigue avanzando por etapas y recibiendo abonos, pero ya no se puede cambiar su cobro ni borrar (lo bloquea la base de datos). Un lote con abonos tampoco se puede borrar. Las tablas están en tiempo real: lo que se guarda en el computador aparece al instante en el celular.
+
+## Pruebas
+
+```bash
+npm test          # cálculos (cobro, bolsas, mensajes)
+npm run test:db   # aplica las migraciones en un Postgres en memoria y revisa datos, reglas y permisos
+```
 
 ## Estructura
 
@@ -58,6 +69,7 @@ src/
   lib/                 Cliente de Supabase, formatos, utilidades
   types/database.ts    Tipos de la base de datos
 supabase/migrations/   SQL de tablas y políticas
+scripts/               Prueba de migraciones (npm run test:db)
 ```
 
 ## Pendiente

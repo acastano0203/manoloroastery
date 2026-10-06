@@ -39,7 +39,7 @@ export function RegistrosProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     void recargar()
-    return suscribirCambios('registros', recargar)
+    return suscribirCambios('lotes', recargar)
   }, [recargar])
 
   const enviar = useCallback(async (id: string) => {
