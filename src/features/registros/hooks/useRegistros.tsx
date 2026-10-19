@@ -3,7 +3,7 @@ import { mensajeError } from '../../../lib/errores'
 import { suscribirCambios } from '../../../lib/realtime'
 import { enviarRegistroASiigo } from '../../configuracion/services/siigoService'
 import { etapaAnterior, siguienteEtapa } from '../etapas'
-import { cambiarEstado, cambiarEtapa, eliminarRegistro, listarRegistros, obtenerRegistro } from '../services/registrosService'
+import { cambiarEstado, cambiarEtapa, eliminarRegistro, listarRegistros, obtenerRegistro, reabrirRegistro, type DatosPaso } from '../services/registrosService'
 import type { Aviso, Etapa, Registro } from '../types'
 
 interface RegistrosValue {
@@ -16,12 +16,14 @@ interface RegistrosValue {
   setAviso: (a: Aviso | null) => void
   enviar: (id: string) => Promise<void>
   eliminar: (r: Registro) => Promise<void>
-  /** Pasa el lote a la etapa siguiente (con "Deshacer" en el aviso). */
-  avanzar: (r: Registro) => Promise<void>
+  /** Pasa el lote a la etapa siguiente (con "Deshacer" en el aviso), guardando lo que se anota en ese paso. */
+  avanzar: (r: Registro, datos?: DatosPaso) => Promise<void>
   /** Devuelve el lote a la etapa anterior. */
   regresar: (r: Registro) => Promise<void>
+  /** Reabre un lote enviado para modificarlo: queda en Entregado, pendiente de enviar otra vez. */
+  reabrir: (r: Registro) => Promise<void>
   /** Pone el lote en una etapa (lo usa "Deshacer"). */
-  moverA: (id: string, etapa: Etapa) => Promise<void>
+  moverA: (id: string, etapa: Etapa, datos?: DatosPaso) => Promise<void>
 }
 
 const RegistrosContext = createContext<RegistrosValue | null>(null)
@@ -74,20 +76,20 @@ export function RegistrosProvider({ children }: { children: ReactNode }) {
     }
   }, [recargar])
 
-  const moverA = useCallback(async (id: string, etapa: Etapa) => {
+  const moverA = useCallback(async (id: string, etapa: Etapa, datos?: DatosPaso) => {
     setAviso(null)
     try {
-      await cambiarEtapa(id, etapa)
+      await cambiarEtapa(id, etapa, datos)
     } catch (e) {
       setAviso({ kind: 'error', text: mensajeError(e) })
     }
     await recargar()
   }, [recargar])
 
-  const avanzar = useCallback(async (r: Registro) => {
+  const avanzar = useCallback(async (r: Registro, datos?: DatosPaso) => {
     const etapa = siguienteEtapa(r)
     if (!etapa) return
-    await moverA(r.id, etapa)
+    await moverA(r.id, etapa, datos)
     setAviso((a) => a ?? { kind: 'ok', text: `${r.cliente} (${r.codigo}) pasó a ${etapa}.`, deshacer: { id: r.id, etapa: r.etapa } })
   }, [moverA])
 
@@ -97,6 +99,17 @@ export function RegistrosProvider({ children }: { children: ReactNode }) {
     await moverA(r.id, etapa)
     setAviso((a) => a ?? { kind: 'neutral', text: `${r.cliente} (${r.codigo}) volvió a ${etapa}.`, deshacer: { id: r.id, etapa: r.etapa } })
   }, [moverA])
+
+  const reabrir = useCallback(async (r: Registro) => {
+    setAviso(null)
+    try {
+      await reabrirRegistro(r.id)
+      setAviso({ kind: 'ok', text: `${r.cliente} (${r.codigo}) reabierto: está en Entregado, pendiente de enviar otra vez.` })
+    } catch (e) {
+      setAviso({ kind: 'error', text: mensajeError(e) })
+    }
+    await recargar()
+  }, [recargar])
 
   const eliminar = useCallback(async (r: Registro) => {
     try {
@@ -115,7 +128,7 @@ export function RegistrosProvider({ children }: { children: ReactNode }) {
   )
 
   return (
-    <RegistrosContext.Provider value={{ registros, cargando, error, recargar, aviso, setAviso, enviar, eliminar, avanzar, regresar, moverA }}>
+    <RegistrosContext.Provider value={{ registros, cargando, error, recargar, aviso, setAviso, enviar, eliminar, avanzar, regresar, reabrir, moverA }}>
       {children}
     </RegistrosContext.Provider>
   )

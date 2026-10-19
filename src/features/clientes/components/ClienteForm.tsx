@@ -42,7 +42,7 @@ export function ClienteForm({ titulo, inicial, clientes, idEditando, onGuardar, 
   }
 
   return (
-    <section aria-label={titulo} className="flex flex-col gap-4 rounded-[14px] border-2 border-vino bg-white p-4 sm:p-5">
+    <section aria-label={titulo} className="flex flex-col gap-4 rounded-[14px] border-2 border-esmeralda bg-white p-4 sm:p-5">
       <h2 className="m-0 text-lg font-bold">{titulo}</h2>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <Field label="Nombre" htmlFor="cl-nombre" error={errores.nombre}>

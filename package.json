@@ -11,6 +11,7 @@
     "test:db": "node scripts/probar-migraciones.mjs supabase/migrations"
   },
   "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
     "@supabase/supabase-js": "^2.109.0",
     "@tailwindcss/vite": "^4.3.3",
     "react": "^19.3.0",

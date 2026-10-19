@@ -14,7 +14,7 @@ const falla = async (sql, p) => { try { await db.query(sql, p); return null } ca
 await db.exec(`
   create role authenticated; create role anon;
   create schema auth;
-  create table auth.users (id uuid primary key);
+  create table auth.users (id uuid primary key, email text);
   create function auth.uid() returns uuid language sql stable as
     $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
   grant usage on schema auth to authenticated;
@@ -69,6 +69,8 @@ const cfg = (await q(`select * from configuracion`))[0]
 ok(cfg.precio_lb === 3000 && Number(cfg.humedad_min) === 10 && Number(cfg.merma_max) === 20 && cfg.gas_por_bache === null,
   'configuración: precios intactos y rangos por defecto')
 ok((await q(`select 1 from storage.buckets where id = 'lotes' and not public`)).length === 1, 'carpeta privada "lotes" creada')
+ok((await q(`select 1 from storage.buckets where id = 'lotes' and 'application/pdf' = any (allowed_mime_types)`)).length === 1, 'carpeta "lotes" acepta PDF')
+ok((await q(`select 1 from storage.buckets where id = 'lotes' and 'image/heic' = any (allowed_mime_types)`)).length === 1, 'carpeta "lotes" acepta fotos HEIC')
 const pub = (await q(`select tablename from pg_publication_tables where pubname = 'supabase_realtime' order by 1`)).map((r) => r.tablename)
 ok(['clientes', 'configuracion', 'lotes', 'pagos', 'tostiones'].every((t) => pub.includes(t)), `tiempo real: ${pub.join(', ')}`)
 
@@ -83,10 +85,21 @@ ok(nuevo.pago === null && nuevo.user_id === U, 'lote nuevo sin forma de pago y c
 const prom = (await q(`select fecha_entrega_prometida = current_date + 3 as ok from lotes where id = $1`, [nuevo.id]))[0].ok
 ok(prom, 'entrega prometida = hoy + 3 días')
 
+const sinGramos = (await q(`
+  insert into lotes (cliente_id, cliente, celular, proceso, kilos, precio_lb, precio_340, precio_500, precio_2500)
+  values ($1, 'Ana', '3001234567', 'Natural', 4, 3000, 1500, 1800, 4000) returning *`, [cli]))[0]
+ok(sinGramos.gramos === null && sinGramos.etapa === 'Recibido', 'lote recibido sin café a tostar: aceptado')
+ok(!(await falla(`update lotes set etapa = 'Trillado' where id = $1`, [sinGramos.id])), 'trillado sin café a tostar: aceptado')
+let e = await falla(`update lotes set etapa = 'Tostado' where id = $1`, [sinGramos.id])
+ok(e?.includes('lotes_gramos_al_tostar'), `tostado sin café a tostar: rechazado (${e})`)
+ok(!(await falla(`update lotes set etapa = 'Tostado', gramos = 3500 where id = $1`, [sinGramos.id])), 'tostado con café a tostar: aceptado')
+ok(!!(await falla(`update lotes set gramos = null where id = $1`, [sinGramos.id])), 'tostado: no deja borrar el café a tostar')
+await q(`delete from lotes where id = $1`, [sinGramos.id])
+
 const enviado = lotes[0].id
 ok(!(await falla(`update lotes set etapa = 'Entregado', subproducto_entregado = true, kilos_verde = 10 where id = $1`, [enviado])),
   'lote enviado: sí deja cambiar etapa y datos de proceso')
-let e = await falla(`update lotes set gramos = 1 where id = $1`, [enviado])
+e = await falla(`update lotes set gramos = 1 where id = $1`, [enviado])
 ok(e?.includes('contabilidad'), `lote enviado: no deja cambiar el cobro (${e})`)
 e = await falla(`update lotes set n340 = 5 where id = $1`, [enviado])
 ok(!!e, 'lote enviado: no deja cambiar bolsas')
@@ -102,10 +115,39 @@ ok(!!(await falla(`update lotes set molienda = 'Fino' where id = $1`, [lotes[1].
 ok(!(await falla(`update lotes set presentacion = 'Molido', molienda = 'Fino', humedad_pct = 11.5 where id = $1`, [lotes[1].id])),
   'Molido + Fino + humedad 11,5: aceptado')
 ok(!!(await falla(`update lotes set humedad_pct = 120 where id = $1`, [lotes[1].id])), 'humedad 120 %: rechazada')
+ok(!(await falla(`update lotes set densidad_gl = 712.5 where id = $1`, [lotes[1].id])), 'densidad 712,5 g/L: aceptada')
+ok(!(await falla(`update lotes set n_drip = 10, precio_drip = 2500, bolsas_cliente = true, gramos_tostado = 1200 where id = $1`, [lotes[1].id])),
+  'empaque: drips, sin bolsa y peso tostado aceptados')
+e = await falla(`update lotes set gramos_tostado = 999999 where id = $1`, [lotes[1].id])
+ok(e?.includes('lotes_tostado_menor_que_almendra'), `tostado que pesa más que la almendra: rechazado (${e})`)
+e = await falla(`update lotes set n_drip = 3 where id = $1`, [enviado])
+ok(e?.includes('contabilidad'), `lote enviado: no deja cambiar los drips (${e})`)
+ok(!(await falla(`update lotes set gramos_tostado = 8000 where id = $1`, [enviado])), 'lote enviado: sí deja anotar el peso tostado')
+ok(lotes.every((l) => l.almacenamiento === false), 'lotes existentes: sin almacenamiento')
+e = await falla(`update lotes set almacenamiento = true, almacen_dias = 3 where id = $1`, [lotes[1].id])
+ok(e?.includes('lotes_almacenamiento_completo'), `almacenamiento sin cantidad, marcado ni foto: rechazado (${e})`)
+ok(!!(await falla(`update lotes set almacenamiento = true, almacen_dias = 11, almacen_gramos = 1000, almacen_marcado = 'Bolsa roja', almacen_foto = 'x.jpg' where id = $1`, [lotes[1].id])),
+  'almacenamiento de 11 días: rechazado (máximo 10)')
+ok(!(await falla(`update lotes set almacenamiento = true, almacen_dias = 10, almacen_gramos = 1000, almacen_marcado = 'Bolsa roja', almacen_foto = 'x.jpg' where id = $1`, [lotes[1].id])),
+  'almacenamiento completo de 10 días: aceptado')
+ok((await q(`select almacen_unidad from lotes where id = $1`, [lotes[1].id]))[0].almacen_unidad === 'g', 'unidad del almacenamiento: gramos por defecto')
+ok(!(await falla(`update lotes set almacen_unidad = 'lb' where id = $1`, [lotes[1].id])), 'unidad en libras: aceptada')
+ok(!!(await falla(`update lotes set almacen_unidad = 'oz' where id = $1`, [lotes[1].id])), 'unidad en onzas: rechazada')
+ok(!!(await falla(`update lotes set densidad_gl = 0 where id = $1`, [lotes[1].id])), 'densidad 0 g/L: rechazada')
 
 const t = (await q(`insert into tostiones (lote_id, gramos_verde_entrada) values ($1, 2000) returning *`, [lotes[1].id]))[0]
 ok(t.gramos_tostado_salida === null && t.user_id === U, 'bache con solo la entrada: aceptado')
 ok(!!(await falla(`insert into tostiones (lote_id, gramos_verde_entrada) values ($1, 0)`, [lotes[1].id])), 'bache con 0 g: rechazado')
+
+ok(t.origen === 'manual', 'bache nuevo: curva manual por defecto')
+ok(!(await falla(`update tostiones set temp_carga_c = 200, aire_inicial = 25, llama_inicial = 100, crack_seg = 480, descarga_seg = 600 where id = $1`, [t.id])),
+  'curva: carga, aire, llama, crack y descarga aceptados')
+ok(!!(await falla(`update tostiones set aire_inicial = 30 where id = $1`, [t.id])), 'aire 30: rechazado (solo 0, 25, 50, 75, 100)')
+ok(!!(await falla(`update tostiones set crack_seg = 700 where id = $1`, [t.id])), 'crack después de la descarga: rechazado')
+ok(!(await falla(`insert into tostion_lecturas (tostion_id, segundo, temp_grano, temp_tambor, aire, llama) values ($1, 60, 95.5, 180, 25, 30)`, [t.id])),
+  'lectura del minuto 1: aceptada')
+ok(!!(await falla(`insert into tostion_lecturas (tostion_id, segundo, temp_grano) values ($1, 60, 100)`, [t.id])), 'dos lecturas del mismo minuto: rechazado')
+ok(!!(await falla(`insert into tostion_lecturas (tostion_id, segundo) values ($1, 1860)`, [t.id])), 'lectura después del minuto 30: rechazada')
 ok(!(await falla(`insert into pagos (lote_id, valor, metodo) values ($1, 10000, 'Bold')`, [enviado])), 'abono a lote enviado: aceptado')
 ok(!!(await falla(`insert into pagos (lote_id, valor, metodo) values ($1, 0, 'Bold')`, [enviado])), 'abono de $0: rechazado')
 ok(!!(await falla(`update configuracion set humedad_min = 15`)), 'rango con mínimo mayor que máximo: rechazado')
@@ -117,6 +159,49 @@ const viejo = (await q(`
   values ($1, 'Ana', '3001234567', 'Efectivo', 'Honey', 1, 500, 3000, 1500, 1800, 4000) returning id`, [cli]))[0]
 ok((await q(`select etapa from lotes where id = $1`, [viejo.id]))[0].etapa === 'Recibido', 'puede crear (queda en Recibido)')
 ok(!!(await falla(`update registros set gramos = 1 where id = $1`, [enviado])), 'no puede cambiar el cobro de un enviado')
+
+console.log('\nReabrir un lote enviado')
+e = await falla(`update lotes set estado = 'Pendiente', gramos = 9999 where id = $1`, [enviado])
+ok(e?.includes('contabilidad'), `reabrir y cambiar el cobro a la vez: rechazado (${e})`)
+ok(!!(await falla(`update lotes set estado = 'Error' where id = $1`, [enviado])), 'enviado → Error: rechazado')
+ok(!(await falla(`update lotes set estado = 'Pendiente', enviado_at = null, reabierto_at = now() where id = $1`, [enviado])),
+  'reabrir (Enviado → Pendiente): aceptado')
+ok(!(await falla(`update lotes set gramos = 9000 where id = $1`, [enviado])), 'reabierto: sí deja cambiar el cobro')
+
+console.log('\nRoles y permisos')
+const como = async (id) => db.exec(`set role authenticated; select set_config('request.jwt.claim.sub', '${id}', false);`)
+await db.exec(`reset role;`)
+const TOST = '22222222-2222-2222-2222-222222222222', NUEVO = '33333333-3333-3333-3333-333333333333'
+await db.exec(`insert into auth.users (id, email) values ('${TOST}', 'tostador@x.co'), ('${NUEVO}', 'nuevo@x.co');`)
+const perfiles = await q(`select p.id, p.correo, r.nombre as rol from perfiles p left join roles r on r.id = p.rol_id`)
+ok(perfiles.find((p) => p.id === U)?.rol === 'Administrador', 'usuario que ya existía: queda como Administrador')
+ok(perfiles.find((p) => p.id === NUEVO)?.rol === null && perfiles.find((p) => p.id === NUEVO)?.correo === 'nuevo@x.co', 'usuario nuevo: perfil sin rol, con su correo')
+const permisosAux = (await q(`select permiso from rol_permisos rp join roles r on r.id = rp.rol_id where r.nombre = 'Auxiliar' order by 1`)).map((x) => x.permiso)
+ok(permisosAux.join() === 'clientes,historial,nuevo_lote,tablero', `Auxiliar arranca con: ${permisosAux.join(', ')}`)
+await db.exec(`update perfiles set rol_id = (select id from roles where nombre = 'Tostador') where id = '${TOST}'`)
+
+await como(NUEVO)
+ok((await q(`select 1 from lotes`)).length === 0, 'sin rol: no ve lotes')
+ok((await q(`select 1 from clientes`)).length === 0, 'sin rol: no ve clientes')
+
+await como(TOST)
+ok((await q(`select 1 from lotes`)).length > 0, 'tostador: ve los lotes (tablero)')
+e = await falla(`insert into lotes (cliente_id, cliente, celular, proceso, kilos, precio_lb, precio_340, precio_500, precio_2500)
+  values ($1, 'Ana', '3001234567', 'Natural', 4, 3000, 1500, 1800, 4000)`, [cli])
+ok(!!e, `tostador: no crea lotes (${e})`)
+ok((await q(`update configuracion set precio_lb = 1 returning 1`)).length === 0, 'tostador: no cambia la configuración')
+ok((await q(`update perfiles set rol_id = (select id from roles where administrador) where id = '${TOST}' returning 1`)).length === 0,
+  'tostador: no se puede dar el rol de administrador')
+ok(!!(await falla(`insert into roles (nombre) values ('Hacker')`)), 'tostador: no crea roles')
+ok(!(await falla(`insert into tostiones (lote_id, gramos_verde_entrada) values ($1, 1000)`, [lotes[1].id])), 'tostador: sí registra tostiones (curvas)')
+
+await como(U)
+ok(!(await falla(`insert into roles (nombre) values ('Bodega')`)), 'admin: crea un rol')
+e = await falla(`update perfiles set rol_id = null where id = $1`, [U])
+ok(e?.includes('al menos un administrador'), `admin: no puede quitarse el rol si es el único (${e})`)
+e = await falla(`delete from roles where administrador`)
+ok(e?.includes('no se puede eliminar'), `el rol Administrador no se borra (${e})`)
+ok((await q(`select 1 from perfiles`)).length === 3, 'admin: ve todos los perfiles')
 
 console.log(fallas ? `\n${fallas} prueba(s) fallaron` : '\nTodas las pruebas pasaron')
 process.exit(fallas ? 1 : 0)

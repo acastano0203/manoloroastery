@@ -14,7 +14,7 @@ export function Chip({ on, onClick, children }: Props) {
       onClick={onClick}
       className={cx(
         'h-11 rounded-full border px-4 text-[15px] font-semibold',
-        on ? 'border-dorado-oscuro bg-dorado text-cafe' : 'border-arena-oscuro bg-white text-cafe-medio',
+        on ? 'border-esmeralda bg-esmeralda/15 text-bosque' : 'border-linea-oscuro bg-white text-pizarra',
       )}
     >
       {children}

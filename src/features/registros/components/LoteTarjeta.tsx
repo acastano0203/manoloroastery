@@ -1,38 +1,44 @@
-import { useState } from 'react'
+import { useDraggable } from '@dnd-kit/core'
 import { Link } from 'react-router-dom'
 import { Button } from '../../../components/ui/Button'
 import { buttonClass } from '../../../components/ui/buttonClass'
 import { Icon } from '../../../components/ui/Icon'
+import { cx } from '../../../lib/cx'
 import { dec, fecha, kg } from '../../../lib/format'
-import { PASO, siguienteEtapa } from '../etapas'
+import { siguienteEtapa } from '../etapas'
+import { usePermisos } from '../../admin/hooks/usePermisos'
 import { useRegistros } from '../hooks/useRegistros'
 import type { Registro } from '../types'
 import { calcularCobro } from '../utils'
 import { EstadoBadge } from './EstadoBadge'
+import { SiguientePaso } from './SiguientePaso'
 
-/** Un lote en la pantalla de Registros: datos clave y el botón grande del siguiente paso. */
+/** Un lote en el tablero: datos clave y el botón grande del siguiente paso. Se puede arrastrar a la etapa vecina. */
 export function LoteTarjeta({ r }: { r: Registro }) {
-  const { avanzar, enviar } = useRegistros()
-  const [moviendo, setMoviendo] = useState(false)
+  const { enviar } = useRegistros()
   const siguiente = siguienteEtapa(r)
   const c = calcularCobro(r, r.precios)
   const enviando = r.estado === 'Enviando'
-
-  async function siguientePaso() {
-    setMoviendo(true)
-    await avanzar(r)
-    setMoviendo(false)
-  }
+  const { puede } = usePermisos()
+  const mueve = puede('tablero')
+  const { setNodeRef, listeners, isDragging } = useDraggable({ id: r.id, data: { r }, disabled: enviando || !mueve })
+  // Sin teclado: con Enter o espacio en los botones de adentro arrancaría un arrastre. Desde el teclado se usan los botones.
+  const { onKeyDown: _sinTeclado, ...punteros } = listeners ?? {}
 
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-arena bg-white p-4">
-      <Link to={`/registros/${r.id}`} className="flex w-full flex-col gap-1 text-cafe no-underline">
+    <div ref={setNodeRef} {...punteros}
+      className={cx(mueve && 'cursor-grab', 'flex touch-manipulation select-none flex-col gap-3 rounded-xl border border-linea bg-white p-3.5 shadow-[0_1px_2px_rgba(18,38,32,0.06)] [-webkit-touch-callout:none]',
+        isDragging && 'opacity-40')}>
+      <Link to={`/registros/${r.id}`} draggable={false} className="flex w-full flex-col gap-1 text-bosque no-underline">
         <span className="flex w-full items-baseline justify-between gap-3">
-          <span className="text-[17px] font-semibold">{r.cliente}</span>
-          <span className="whitespace-nowrap text-sm font-semibold text-cafe-suave">{r.codigo}</span>
+          <span className="min-w-0 text-[17px] font-semibold [overflow-wrap:anywhere]">{r.cliente}</span>
+          <span className="whitespace-nowrap text-sm font-semibold text-pizarra-suave">{r.codigo}</span>
         </span>
-        <span className="text-[15px] text-cafe-suave tabular-nums">
-          {fecha(r.fecha)} · {r.proceso} · {kg(r.kilos)} kg · tostar {dec(r.gramos, 0)} g
+        {r.reabiertoAt && r.estado !== 'Enviado' && (
+          <span className="self-start rounded-full bg-amber-100 px-2.5 py-0.5 text-[13px] font-semibold text-amber-800">Reabierto</span>
+        )}
+        <span className="text-[15px] text-pizarra-suave tabular-nums">
+          {fecha(r.fecha)} · {r.proceso} · {kg(r.kilos)} kg{r.gramos !== null && ` · ${dec(r.gramos, 0)} g en almendra`}
         </span>
         {!siguiente && (
           <span className="flex w-full items-center justify-between gap-2 pt-1">
@@ -43,21 +49,18 @@ export function LoteTarjeta({ r }: { r: Registro }) {
       </Link>
 
       {siguiente ? (
-        <Button size="xl" onClick={() => void siguientePaso()} disabled={moviendo} className="w-full font-bold">
-          Siguiente paso · {PASO[siguiente]}
-          <Icon name="adelante" size={22} />
-        </Button>
+        <SiguientePaso r={r} size="lg" className="w-full font-bold" />
       ) : (
         <div className="grid grid-cols-2 gap-2">
           {r.estado === 'Enviado' ? (
-            <Link to={`/registros/${r.id}/remision`} className={buttonClass('primary', 'xl', 'col-span-2 font-bold')}>
+            <Link to={`/registros/${r.id}/remision`} className={buttonClass('primary', 'lg', 'col-span-2 font-bold')}>
               <Icon name="compartir" size={20} />
               Remisión
             </Link>
           ) : (
             <>
-              <Link to={`/registros/${r.id}`} className={buttonClass('outline', 'xl')}>Ver lote</Link>
-              <Button size="xl" onClick={() => void enviar(r.id)} disabled={enviando} className="font-bold">
+              <Link to={`/registros/${r.id}`} className={buttonClass('outline', 'lg', 'px-2')}>Ver lote</Link>
+              <Button size="lg" onClick={() => void enviar(r.id)} disabled={enviando || !mueve} className="px-2 font-bold">
                 <Icon name="enviar" size={20} />
                 {enviando ? 'Enviando…' : r.estado === 'Error' ? 'Reenviar' : 'Enviar'}
               </Button>

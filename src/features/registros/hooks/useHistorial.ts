@@ -1,28 +1,25 @@
 import { useMemo, useState } from 'react'
-import { hoyISO, norm } from '../../../lib/format'
+import { hoyISO } from '../../../lib/format'
+import { agruparPorDia, filtrarHistorial, paginar, resumirHistorial, type Rango } from '../historial'
 import { useRegistros } from './useRegistros'
 
-export type Rango = 'hoy' | 'ayer' | 'semana' | 'todo'
-export const RANGOS: ReadonlyArray<[Rango, string]> = [['hoy', 'Hoy'], ['ayer', 'Ayer'], ['semana', '7 días'], ['todo', 'Todo']]
-
-/** Lotes entregados y enviados a contabilidad, filtrados por fecha y nombre de cliente. */
+/** Historial: filtros, totales de lo filtrado y la página actual agrupada por día. */
 export function useHistorial() {
   const { registros } = useRegistros()
-  const [rango, setRango] = useState<Rango>('semana')
-  const [q, setQ] = useState('')
+  const [rango, setRangoEstado] = useState<Rango>('30')
+  const [q, setQEstado] = useState('')
+  const [pagina, setPagina] = useState(1)
 
-  const enviados = useMemo(() => registros.filter((r) => r.etapa === 'Entregado' && r.estado === 'Enviado'), [registros])
+  const lista = useMemo(() => filtrarHistorial(registros, rango, q, hoyISO()), [registros, rango, q])
+  const resumen = useMemo(() => resumirHistorial(lista), [lista])
+  const pag = paginar(lista, pagina)
+  const grupos = useMemo(() => agruparPorDia(pag.items), [pag.items])
 
-  const lista = useMemo(() => {
-    const ayer = hoyISO(-1)
-    const desde: Record<Rango, string> = { hoy: hoyISO(), ayer, semana: hoyISO(-6), todo: '0000' }
-    const nq = norm(q.trim())
-    return enviados.filter((r) => {
-      if (rango === 'ayer' ? r.fecha !== ayer : r.fecha < desde[rango]) return false
-      return !nq || norm(r.cliente).includes(nq)
-    })
-  }, [enviados, rango, q])
+  // Al cambiar un filtro se vuelve a la primera página.
+  const setRango = (r: Rango) => { setRangoEstado(r); setPagina(1) }
+  const setQ = (v: string) => { setQEstado(v); setPagina(1) }
 
-  const vacioTxt = enviados.length ? 'No hay lotes con estos filtros.' : 'Aún no hay lotes entregados y enviados.'
-  return { lista, rango, setRango, q, setQ, vacioTxt }
+  const hayEnviados = registros.some((r) => r.etapa === 'Entregado' && r.estado === 'Enviado')
+  const vacioTxt = hayEnviados ? 'No hay lotes con estos filtros.' : 'Aún no hay lotes entregados y enviados.'
+  return { rango, setRango, q, setQ, resumen, grupos, pag, setPagina, vacioTxt }
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { etapaAnterior, etapasDe, siguienteEtapa } from './etapas'
+import { etapaAnterior, etapasDe, movimientoA, siguienteEtapa } from './etapas'
 
 describe('etapas del lote', () => {
   it('pergamino pasa por todas las etapas', () => {
@@ -28,5 +28,15 @@ describe('etapas del lote', () => {
   it('si cambió a Verde estando en Trillado, igual sabe seguir y volver', () => {
     expect(siguienteEtapa({ llegada: 'Verde', etapa: 'Trillado' })).toBe('Tostado')
     expect(etapaAnterior({ llegada: 'Verde', etapa: 'Trillado' })).toBe('Recibido')
+  })
+
+  it('al arrastrar en el tablero solo se mueve un paso adelante o atrás', () => {
+    const r = { llegada: 'Pergamino' as const, etapa: 'Trillado' as const }
+    expect(movimientoA(r, 'Tostado')).toBe('avanzar')
+    expect(movimientoA(r, 'Recibido')).toBe('regresar')
+    expect(movimientoA(r, 'Trillado')).toBeNull()
+    expect(movimientoA(r, 'Empacado')).toBeNull()
+    expect(movimientoA({ llegada: 'Verde', etapa: 'Recibido' }, 'Tostado')).toBe('avanzar')
+    expect(movimientoA({ llegada: 'Verde', etapa: 'Recibido' }, 'Trillado')).toBeNull()
   })
 })

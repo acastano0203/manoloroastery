@@ -26,13 +26,18 @@ export function RegistroForm({ registroId }: { registroId?: string }) {
     <>
       <main className="mx-auto flex w-full max-w-[720px] flex-1 flex-col gap-7 px-4 pb-10 pt-6">
         <PageHeading title={f.titulo} back={{ to: '/', label: 'Registros' }} />
-        <Field label="Fecha" htmlFor="fecha" className="max-w-[260px]">
-          <TextInput id="fecha" type="date" value={f.form.fecha} onChange={(e) => f.set({ fecha: e.target.value })} />
-        </Field>
+        {f.existente && <p className="m-0 -mt-3 text-[15px] text-pizarra-suave">
+          El lote está en <strong className="text-bosque">{f.existente.etapa}</strong>: aquí cambias los datos de esa etapa y los del cliente.
+        </p>}
+        {f.editaRecepcion && (
+          <Field label="Fecha" htmlFor="fecha" className="max-w-[260px]">
+            <TextInput id="fecha" type="date" value={f.form.fecha} onChange={(e) => f.set({ fecha: e.target.value })} />
+          </Field>
+        )}
         <ClienteCampos f={f} />
         <FacturaCampos f={f} />
         <CafeCampos f={f} />
-        <BolsasSelector f={f} />
+        {f.pideBolsas && <BolsasSelector f={f} />}
       </main>
       <ResumenCobroBar f={f} />
     </>

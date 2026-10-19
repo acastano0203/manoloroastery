@@ -11,7 +11,7 @@ export function FacturaCampos({ f }: { f: RegistroFormApi }) {
       <OptionGroup label="¿Requiere factura electrónica?" options={['Sí', 'No'] as const}
         value={form.factura ? 'Sí' : 'No'} onChange={(v) => set({ factura: v === 'Sí' })} gridClassName="grid-cols-2 max-w-80" />
       {form.factura && (
-        <div className="flex flex-col gap-4 rounded-xl border border-arena bg-white p-4 sm:p-5">
+        <div className="flex flex-col gap-4 rounded-xl border border-linea bg-white p-4 sm:p-5">
           <OptionGroup label="Tipo de documento" options={TIPOS_DOC} value={form.tipoDoc}
             onChange={(v) => set({ tipoDoc: v })} gridClassName="grid-cols-2 max-w-80" />
           <Field label="Número de documento" htmlFor="numdoc" error={errores.numDoc}>

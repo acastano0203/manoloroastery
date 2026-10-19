@@ -37,13 +37,13 @@ export function ClienteCampos({ f }: { f: RegistroFormApi }) {
         )}
         {elegido && (
           <>
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-[10px] border border-dorado bg-white py-3 pl-4 pr-3">
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-[10px] border border-verde-salvia bg-white py-3 pl-4 pr-3">
               <div className="flex min-w-0 flex-wrap items-center gap-2.5">
                 <span className={cx('whitespace-nowrap rounded-full px-2.5 py-1 text-[13px] font-bold',
-                  form.clienteNuevo ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800')}>
+                  form.clienteNuevo ? 'bg-amber-100 text-amber-800' : 'bg-verde-menta text-verde-botella')}>
                   {form.clienteNuevo ? 'Cliente nuevo' : 'Cliente guardado'}
                 </span>
-                <span className="text-[15px] text-cafe-medio">
+                <span className="text-[15px] text-pizarra">
                   {form.clienteNuevo ? 'Se guarda al guardar el registro' : guardado ? `${guardado.codigo} · datos cargados` : ''}
                 </span>
               </div>

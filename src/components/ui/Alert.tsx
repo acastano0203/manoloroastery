@@ -5,9 +5,9 @@ import { Icon } from './Icon'
 export type AlertKind = 'ok' | 'error' | 'neutral'
 
 const colores: Record<AlertKind, string> = {
-  ok: 'bg-green-100 text-green-800',
+  ok: 'bg-verde-menta text-verde-botella',
   error: 'bg-red-100 text-red-800',
-  neutral: 'bg-arena text-cafe',
+  neutral: 'bg-linea text-bosque',
 }
 
 interface Props {

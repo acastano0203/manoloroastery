@@ -22,7 +22,11 @@ Stack: Vite + React + TypeScript, Tailwind CSS v4, React Router, Supabase (base 
    npx supabase db push
    ```
    (O pega en el SQL Editor de Supabase, en orden, cada archivo de `supabase/migrations/`.)
-4. Crea los usuarios del equipo en Supabase › Authentication › Users (correo + contraseña) y desactiva los registros públicos en Authentication › Sign In / Providers (*Allow new users to sign up*).
+4. Crea los usuarios del equipo en Supabase › Authentication › Users (correo + contraseña) y desactiva los registros públicos en Authentication › Sign In / Providers (*Allow new users to sign up*). Entran sin rol: un administrador se lo asigna en la app, en **Administración › Usuarios** (los usuarios que ya existían al aplicar la migración de roles quedan como administradores).
+   Para que el administrador también pueda **crear usuarios desde la app**, publica la Edge Function (usa la llave de servicio, que nunca va al navegador):
+   ```bash
+   npx supabase functions deploy crear-usuario
+   ```
 5. Regenera los tipos (opcional, `src/types/database.ts` ya está escrito a mano según la migración):
    ```bash
    npx supabase gen types typescript --project-id <id-del-proyecto> > src/types/database.ts
@@ -44,7 +48,7 @@ Stack: Vite + React + TypeScript, Tailwind CSS v4, React Router, Supabase (base 
 
 Fotos y archivos de curva van en la carpeta privada `lotes` de Supabase Storage.
 
-Todas con RLS: cualquier usuario con sesión iniciada ve y edita los datos del equipo; `user_id` guarda quién creó cada fila. Un lote enviado a Siigo sigue avanzando por etapas y recibiendo abonos, pero ya no se puede cambiar su cobro ni borrar (lo bloquea la base de datos). Un lote con abonos tampoco se puede borrar. Las tablas están en tiempo real: lo que se guarda en el computador aparece al instante en el celular.
+Todas con RLS. Cada usuario tiene un **rol** (`perfiles.rol_id`) y cada rol unos **permisos** (`rol_permisos`: tablero, nuevo lote, curvas, historial, clientes, configuración); el rol Administrador ve todo y administra roles y usuarios. Los permisos se cumplen en la base de datos con políticas restrictivas (`tiene_permiso()`), no solo en la app. Un usuario sin rol no ve nada. `user_id` guarda quién creó cada fila. Un lote enviado a Siigo sigue avanzando por etapas y recibiendo abonos, pero ya no se puede cambiar su cobro ni borrar (lo bloquea la base de datos). Un lote con abonos tampoco se puede borrar. Las tablas están en tiempo real: lo que se guarda en el computador aparece al instante en el celular.
 
 ## Pruebas
 

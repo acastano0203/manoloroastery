@@ -13,7 +13,7 @@ export function PrecioInput({ id, label, value, onChange }: Props) {
     <div className="flex flex-col gap-2">
       <label htmlFor={id} className="text-[15px] font-semibold">{label}</label>
       <div className="relative">
-        <span className="pointer-events-none absolute left-4 top-[15px] text-lg text-cafe-suave">$</span>
+        <span className="pointer-events-none absolute left-4 top-[15px] text-lg text-pizarra-suave">$</span>
         <input
           id={id}
           inputMode="numeric"
@@ -22,7 +22,7 @@ export function PrecioInput({ id, label, value, onChange }: Props) {
             const v = e.target.value.replace(/\D/g, '')
             onChange(v ? miles(v) : '')
           }}
-          className="h-14 w-full rounded-[10px] border border-dorado bg-white pl-[34px] pr-4 text-lg tabular-nums"
+          className="h-14 w-full rounded-[10px] border border-verde-salvia bg-white pl-[34px] focus:border-esmeralda pr-4 text-lg tabular-nums"
         />
       </div>
     </div>

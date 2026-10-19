@@ -4,12 +4,12 @@ export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'danger' | 'da
 export type ButtonSize = 'sm' | 'md' | 'lg' | 'xl' | 'xxl'
 
 const variantes: Record<ButtonVariant, string> = {
-  primary: 'bg-vino text-white hover:bg-vino-oscuro font-semibold',
-  secondary: 'bg-white text-vino border border-vino hover:bg-crema-claro font-bold',
-  outline: 'bg-white text-cafe border border-dorado hover:bg-crema-claro font-semibold',
+  primary: 'bg-esmeralda text-white hover:bg-esmeralda-oscuro font-semibold',
+  secondary: 'bg-white text-esmeralda-oscuro border border-esmeralda hover:bg-esmeralda/10 font-bold',
+  outline: 'bg-white text-bosque border border-verde-salvia hover:border-esmeralda hover:bg-esmeralda/10 font-semibold',
   danger: 'bg-peligro text-white hover:bg-red-800 font-semibold',
   dangerOutline: 'bg-white text-peligro border border-red-200 hover:bg-red-50',
-  link: 'bg-transparent text-vino font-semibold hover:underline',
+  link: 'bg-transparent text-esmeralda-oscuro font-semibold hover:text-esmeralda hover:underline',
 }
 
 const tamanos: Record<ButtonSize, string> = {

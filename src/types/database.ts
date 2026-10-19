@@ -53,7 +53,7 @@ export type Database = {
           pago: Database['public']['Enums']['forma_pago'] | null
           proceso: Database['public']['Enums']['proceso_cafe']
           kilos: number
-          gramos: number
+          gramos: number | null
           n340: number
           n500: number
           n2500: number
@@ -66,6 +66,17 @@ export type Database = {
           etapa: Database['public']['Enums']['etapa_lote']
           llegada: Database['public']['Enums']['llegada_cafe'] | null
           humedad_pct: number | null
+          densidad_gl: number | null
+          n_drip: number
+          precio_drip: number
+          gramos_tostado: number | null
+          almacenamiento: boolean
+          almacen_dias: number | null
+          almacen_gramos: number | null
+          almacen_marcado: string | null
+          almacen_foto: string | null
+          almacen_unidad: 'g' | 'kg' | 'lb'
+          reabierto_at: string | null
           nivel_tueste: Database['public']['Enums']['nivel_tueste'] | null
           presentacion: Database['public']['Enums']['presentacion'] | null
           molienda: Database['public']['Enums']['molienda'] | null
@@ -95,7 +106,7 @@ export type Database = {
           pago?: Database['public']['Enums']['forma_pago'] | null
           proceso: Database['public']['Enums']['proceso_cafe']
           kilos: number
-          gramos: number
+          gramos?: number | null
           n340?: number
           n500?: number
           n2500?: number
@@ -108,6 +119,17 @@ export type Database = {
           etapa?: Database['public']['Enums']['etapa_lote']
           llegada?: Database['public']['Enums']['llegada_cafe'] | null
           humedad_pct?: number | null
+          densidad_gl?: number | null
+          n_drip?: number
+          precio_drip?: number
+          gramos_tostado?: number | null
+          almacenamiento?: boolean
+          almacen_dias?: number | null
+          almacen_gramos?: number | null
+          almacen_marcado?: string | null
+          almacen_foto?: string | null
+          almacen_unidad?: 'g' | 'kg' | 'lb'
+          reabierto_at?: string | null
           nivel_tueste?: Database['public']['Enums']['nivel_tueste'] | null
           presentacion?: Database['public']['Enums']['presentacion'] | null
           molienda?: Database['public']['Enums']['molienda'] | null
@@ -146,6 +168,13 @@ export type Database = {
           temp_carga_c: number | null
           archivo_curva: string | null
           foto_curva: string | null
+          origen: 'manual' | 'automatica'
+          iniciada_at: string | null
+          aire_inicial: number | null
+          llama_inicial: number | null
+          crack_seg: number | null
+          descarga_seg: number | null
+          notas: string | null
           created_at: string
           updated_at: string
         }
@@ -160,6 +189,13 @@ export type Database = {
           temp_carga_c?: number | null
           archivo_curva?: string | null
           foto_curva?: string | null
+          origen?: 'manual' | 'automatica'
+          iniciada_at?: string | null
+          aire_inicial?: number | null
+          llama_inicial?: number | null
+          crack_seg?: number | null
+          descarga_seg?: number | null
+          notas?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -170,6 +206,62 @@ export type Database = {
             columns: ['lote_id']
             isOneToOne: false
             referencedRelation: 'lotes'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      roles: {
+        Row: { id: string; nombre: string; administrador: boolean; created_at: string }
+        Insert: { id?: string; nombre: string; administrador?: boolean; created_at?: string }
+        Update: Partial<Database['public']['Tables']['roles']['Insert']>
+        Relationships: []
+      }
+      rol_permisos: {
+        Row: { rol_id: string; permiso: Database['public']['Enums']['permiso'] }
+        Insert: { rol_id: string; permiso: Database['public']['Enums']['permiso'] }
+        Update: Partial<Database['public']['Tables']['rol_permisos']['Insert']>
+        Relationships: [
+          { foreignKeyName: 'rol_permisos_rol_id_fkey'; columns: ['rol_id']; isOneToOne: false; referencedRelation: 'roles'; referencedColumns: ['id'] },
+        ]
+      }
+      perfiles: {
+        Row: { id: string; correo: string | null; nombre: string | null; rol_id: string | null; created_at: string }
+        Insert: { id: string; correo?: string | null; nombre?: string | null; rol_id?: string | null; created_at?: string }
+        Update: Partial<Database['public']['Tables']['perfiles']['Insert']>
+        Relationships: [
+          { foreignKeyName: 'perfiles_rol_id_fkey'; columns: ['rol_id']; isOneToOne: false; referencedRelation: 'roles'; referencedColumns: ['id'] },
+        ]
+      }
+      tostion_lecturas: {
+        Row: {
+          id: string
+          tostion_id: string
+          segundo: number
+          temp_grano: number | null
+          temp_tambor: number | null
+          aire: number | null
+          llama: number | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          tostion_id: string
+          segundo: number
+          temp_grano?: number | null
+          temp_tambor?: number | null
+          aire?: number | null
+          llama?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['tostion_lecturas']['Insert']>
+        Relationships: [
+          {
+            foreignKeyName: 'tostion_lecturas_tostion_id_fkey'
+            columns: ['tostion_id']
+            isOneToOne: false
+            referencedRelation: 'tostiones'
             referencedColumns: ['id']
           },
         ]
@@ -212,6 +304,7 @@ export type Database = {
           precio_340: number
           precio_500: number
           precio_2500: number
+          precio_drip: number
           siigo_usuario: string
           humedad_min: number
           humedad_max: number
@@ -230,6 +323,7 @@ export type Database = {
           precio_340?: number
           precio_500?: number
           precio_2500?: number
+          precio_drip?: number
           siigo_usuario?: string
           humedad_min?: number
           humedad_max?: number
@@ -248,6 +342,8 @@ export type Database = {
     Views: { [_ in never]: never }
     Functions: { [_ in never]: never }
     Enums: {
+      /** No es un enum de Postgres: es el check de rol_permisos.permiso. */
+      permiso: 'tablero' | 'nuevo_lote' | 'curvas' | 'historial' | 'clientes' | 'configuracion'
       tipo_documento: 'CC' | 'NIT'
       forma_pago: 'Efectivo' | 'Banco' | 'Bold'
       proceso_cafe: 'Pergamino' | 'Natural' | 'Honey' | 'Cofermentado'

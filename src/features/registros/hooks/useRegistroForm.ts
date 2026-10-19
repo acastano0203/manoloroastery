@@ -5,6 +5,7 @@ import { dec, parseG, parseKg } from '../../../lib/format'
 import { useClientes } from '../../clientes/hooks/useClientes'
 import type { Cliente } from '../../clientes/types'
 import { useConfig } from '../../configuracion/hooks/useConfig'
+import { yaEsta } from '../etapas'
 import { formDesdeRegistro, formVacio, validarRegistro, type CampoForm, type FormRegistro } from '../formulario'
 import { actualizarRegistro, crearRegistro } from '../services/registrosService'
 import type { RegistroDatos } from '../types'
@@ -34,11 +35,20 @@ export function useRegistroForm(registroId?: string) {
     }
   }, [existente, listo])
 
-  const todos = useMemo(() => validarRegistro(form), [form])
+  // Al editar solo se cambian los datos de la etapa en la que está el lote (más los del cliente y el pago).
+  // Los de etapas anteriores se ven sin editar: para corregirlos se devuelve el lote a esa etapa.
+  const etapa = existente?.etapa ?? 'Recibido'
+  const editaRecepcion = etapa === 'Recibido'
+  const pideGramos = etapa === 'Tostado'
+  const pideBolsas = etapa === 'Empacado'
+  // El cobro sale del peso en almendra: existe desde que el lote se tostó.
+  const conCobro = Boolean(existente && yaEsta(existente, 'Tostado'))
+
+  const todos = useMemo(() => validarRegistro(form, pideGramos, pideBolsas), [form, pideGramos, pideBolsas])
   const mostrar = (k: CampoForm): string | false => (intentado || tocados[k] ? todos[k] ?? false : false)
   const errores = {
     cliente: mostrar('cliente'), celular: mostrar('celular'), pago: intentado ? todos.pago ?? false : false,
-    kilos: mostrar('kilos'), gramos: mostrar('gramos'), numDoc: mostrar('numDoc'), correo: mostrar('correo'),
+    kilos: mostrar('kilos'), humedad: mostrar('humedad'), densidad: mostrar('densidad'), gramos: mostrar('gramos'), gramosTostado: mostrar('gramosTostado'), numDoc: mostrar('numDoc'), correo: mostrar('correo'),
   }
 
   const set = (patch: Partial<FormRegistro>) => {
@@ -50,7 +60,7 @@ export function useRegistroForm(registroId?: string) {
   const g = parseG(form.gramos)
   const k = parseKg(form.kilos)
   const cobro = config
-    ? calcularCobro({ gramos: g && g > 0 ? g : 0, n340: form.n340, n500: form.n500, n2500: form.n2500 }, config.precios)
+    ? calcularCobro({ ...form, gramos: g && g > 0 ? g : 0 }, config.precios)
     : null
   const avisoCantidad = g && k && g > 0 && k > 0 && g > k * 1000
     ? `Es más de lo recibido (${dec(k * 1000, 0)} g). Revisa las cantidades.`
@@ -74,9 +84,12 @@ export function useRegistroForm(registroId?: string) {
       setForm((f) => ({ ...f, clienteId: cliente.id, clienteNuevo: false }))
 
       const datos: RegistroDatos = {
-        clienteId: cliente.id, fecha: form.fecha, cliente: cliente.nombre, celular: cliente.celular,
+        clienteId: cliente.id, fecha: editaRecepcion ? form.fecha : existente!.fecha, cliente: cliente.nombre, celular: cliente.celular,
         factura: cliente.factura, tipoDoc: cliente.tipoDoc, numDoc: cliente.numDoc, correo: cliente.correo,
-        pago: form.pago!, proceso: form.proceso, kilos: k!, gramos: g!, n340: form.n340, n500: form.n500, n2500: form.n2500,
+        pago: form.pago!, ...(editaRecepcion
+          ? { proceso: form.proceso, kilos: k!, humedad: parseKg(form.humedad), densidad: parseKg(form.densidad) }
+          : { proceso: existente!.proceso, kilos: existente!.kilos, humedad: existente!.humedad, densidad: existente!.densidad }), gramos: pideGramos ? g! : existente?.gramos ?? null, n340: form.n340, n500: form.n500, n2500: form.n2500, nDrip: form.nDrip,
+        bolsasCliente: form.bolsasCliente, gramosTostado: pideBolsas ? parseG(form.gramosTostado) : existente?.gramosTostado ?? null,
       }
       const r = registroId
         ? await actualizarRegistro(registroId, datos, config.precios)
@@ -92,7 +105,8 @@ export function useRegistroForm(registroId?: string) {
   }
 
   return {
-    form, set, tocar, errores, cobro, avisoCantidad, formMsg, guardando, guardar,
+    form, set, tocar, errores, cobro, avisoCantidad, formMsg, guardando, guardar, editaRecepcion, pideGramos, pideBolsas, conCobro, existente,
+    llegada: existente?.llegada ?? null,
     precios: config?.precios ?? null,
     listo,
     noEncontrado: Boolean(registroId) && !existente,

@@ -12,7 +12,7 @@ interface Props {
 export function CelularInput({ id, value, onChange, onBlur, error }: Props) {
   return (
     <div className="flex gap-2">
-      <span className="flex h-14 items-center rounded-[10px] border border-dorado bg-crema-claro px-3.5 text-lg text-cafe-medio">
+      <span className="flex h-14 items-center rounded-[10px] border border-verde-salvia bg-rocio-claro px-3.5 text-lg text-pizarra">
         +57
       </span>
       <TextInput

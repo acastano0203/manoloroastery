@@ -9,11 +9,11 @@ function datosDe(r: Registro): DatosRemision {
   const cobro = calcularCobro(r, r.precios)
   const lineas: LineaRemision[] = [{ concepto: 'Tostión', detalle: `${cobro.fLibras} = ${cobro.fTostion}`, valor: cobro.tostionTxt }]
   for (const b of BOLSAS) {
-    if (r[b.n] > 0) lineas.push({ concepto: `Bolsas ${b.label}`, detalle: `${r[b.n]} × ${money(r.precios[b.p])}`, valor: money(r[b.n] * r.precios[b.p]) })
+    if (r[b.n] > 0) lineas.push({ concepto: b.plural, detalle: `${r[b.n]} × ${money(r.precios[b.p])}`, valor: money(r[b.n] * r.precios[b.p]) })
   }
   return {
     codigo: r.codigo, fechaLarga: fecha(r.fecha, true), cliente: r.cliente, celularTxt: cel(r.celular), proceso: r.proceso,
-    kilosTxt: `${kg(r.kilos)} kg`, gramosTxt: `${dec(r.gramos, 0)} g`, pago: r.pago ?? 'Sin dato', cobro, lineas,
+    kilosTxt: `${kg(r.kilos)} kg`, gramosTxt: `${dec(r.gramos ?? 0, 0)} g`, pago: r.pago ?? 'Sin dato', cobro, lineas,
   }
 }
 

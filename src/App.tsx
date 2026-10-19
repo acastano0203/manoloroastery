@@ -1,9 +1,12 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AppProviders } from './AppProviders'
 import { Layout } from './components/layout/Layout'
+import { ConPermiso, InicioSegunRol, RequiereRol } from './features/admin/components/Acceso'
+import { PermisosProvider } from './features/admin/hooks/usePermisos'
 import { RequireAuth } from './features/auth/components/RequireAuth'
 import { AuthProvider } from './features/auth/hooks/useAuth'
 import { supabaseConfigurado } from './lib/supabase'
+import { AdministracionPage } from './pages/AdministracionPage'
 import { ClientesPage } from './pages/ClientesPage'
 import { ConfiguracionPage } from './pages/ConfiguracionPage'
 import { DetalleRegistroPage } from './pages/DetalleRegistroPage'
@@ -24,19 +27,24 @@ export default function App() {
           <Route
             element={
               <RequireAuth>
-                <AppProviders>
-                  <Layout />
-                </AppProviders>
+                <PermisosProvider>
+                  <RequiereRol>
+                    <AppProviders>
+                      <Layout />
+                    </AppProviders>
+                  </RequiereRol>
+                </PermisosProvider>
               </RequireAuth>
             }
           >
-            <Route index element={<RegistrosPage />} />
-            <Route path="nuevo" element={<NuevoRegistroPage />} />
-            <Route path="registros/:id" element={<DetalleRegistroPage />} />
-            <Route path="registros/:id/editar" element={<NuevoRegistroPage />} />
-            <Route path="registros/:id/remision" element={<RemisionPage />} />
-            <Route path="clientes" element={<ClientesPage />} />
-            <Route path="configuracion" element={<ConfiguracionPage />} />
+            <Route index element={<InicioSegunRol><RegistrosPage /></InicioSegunRol>} />
+            <Route path="nuevo" element={<ConPermiso p="nuevo_lote"><NuevoRegistroPage /></ConPermiso>} />
+            <Route path="registros/:id" element={<ConPermiso lotes><DetalleRegistroPage /></ConPermiso>} />
+            <Route path="registros/:id/editar" element={<ConPermiso p="nuevo_lote"><NuevoRegistroPage /></ConPermiso>} />
+            <Route path="registros/:id/remision" element={<ConPermiso lotes><RemisionPage /></ConPermiso>} />
+            <Route path="clientes" element={<ConPermiso p="clientes"><ClientesPage /></ConPermiso>} />
+            <Route path="configuracion" element={<ConPermiso p="configuracion"><ConfiguracionPage /></ConPermiso>} />
+            <Route path="administracion" element={<ConPermiso admin><AdministracionPage /></ConPermiso>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>

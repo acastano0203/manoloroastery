@@ -12,7 +12,7 @@ export function AvisoRegistros() {
 
   const boton = cx(
     'h-11 rounded-lg border bg-white px-3.5 font-bold',
-    aviso.kind === 'ok' ? 'border-green-800 text-green-800' : 'border-cafe-suave text-cafe',
+    aviso.kind === 'ok' ? 'border-esmeralda-oscuro text-esmeralda-oscuro' : 'border-pizarra-suave text-bosque',
   )
   const { registroId, deshacer } = aviso
 

@@ -12,7 +12,7 @@ import { PrecioInput } from './PrecioInput'
 import { SiigoConexion } from './SiigoConexion'
 
 type Borrador = Record<keyof Precios, string>
-const aBorrador = (p: Precios): Borrador => ({ lb: miles(p.lb), p340: miles(p.p340), p500: miles(p.p500), p2500: miles(p.p2500) })
+const aBorrador = (p: Precios): Borrador => ({ lb: miles(p.lb), p340: miles(p.p340), p500: miles(p.p500), p2500: miles(p.p2500), pDrip: miles(p.pDrip) })
 const num = (v: string) => Number(v.replace(/\D/g, '')) || 0
 
 export function ConfigForm() {
@@ -39,7 +39,7 @@ export function ConfigForm() {
 
   async function onGuardar() {
     if (!config || !borrador) return
-    const precios: Precios = { lb: num(borrador.lb), p340: num(borrador.p340), p500: num(borrador.p500), p2500: num(borrador.p2500) }
+    const precios: Precios = { lb: num(borrador.lb), p340: num(borrador.p340), p500: num(borrador.p500), p2500: num(borrador.p2500), pDrip: num(borrador.pDrip) }
     if (!precios.lb) return setMsg({ kind: 'error', text: 'El precio por libra debe ser mayor que 0.' })
     setGuardando(true)
     try {
@@ -59,10 +59,11 @@ export function ConfigForm() {
         <div className="max-w-[260px]">
           <PrecioInput id="plb" label="Precio por libra de tostión" value={borrador.lb} onChange={set('lb')} />
         </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <PrecioInput id="p340" label="Bolsa 340 g" value={borrador.p340} onChange={set('p340')} />
           <PrecioInput id="p500" label="Bolsa 500 g" value={borrador.p500} onChange={set('p500')} />
           <PrecioInput id="p2500" label="Bolsa 2.500 g" value={borrador.p2500} onChange={set('p2500')} />
+          <PrecioInput id="pDrip" label="Drip (unidad)" value={borrador.pDrip} onChange={set('pDrip')} />
         </div>
       </Card>
       <SiigoConexion usuario={usuario} onUsuario={(v) => { setUsuario(v); setMsg(null) }} />

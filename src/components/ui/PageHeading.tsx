@@ -17,7 +17,7 @@ export function PageHeading({ title, back, subtitle, action, hideTitleOnMobile =
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div className="flex min-w-0 flex-col items-start gap-1">
         {back && (
-          <Link to={back.to} className="hidden min-h-8 items-center gap-1 text-[15px] font-semibold text-vino no-underline md:flex">
+          <Link to={back.to} className="hidden min-h-8 items-center gap-1 text-[15px] font-semibold text-esmeralda-oscuro no-underline md:flex">
             <Icon name="atras" size={18} />
             {back.label}
           </Link>
@@ -25,7 +25,7 @@ export function PageHeading({ title, back, subtitle, action, hideTitleOnMobile =
         <h1 className={hideTitleOnMobile ? 'm-0 hidden text-3xl font-bold md:block' : 'm-0 text-[28px] font-bold'}>
           {title}
         </h1>
-        {subtitle && <div className="text-[15px] text-cafe-suave">{subtitle}</div>}
+        {subtitle && <div className="text-[15px] text-pizarra-suave">{subtitle}</div>}
       </div>
       {action}
     </div>

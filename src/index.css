@@ -1,22 +1,61 @@
 @import "tailwindcss";
 
-/* Colores y fuente del diseño "Registro de tostión" (Don Manolo) */
-@theme {
-  --font-sans: 'Public Sans', system-ui, sans-serif;
+/* TeX Gyre Adventor (títulos y cifras) y TeX Gyre Heros (texto), de GUST/CTAN */
+@font-face {
+  font-family: 'TeX Gyre Adventor';
+  src: url('/fonts/texgyreadventor-regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'TeX Gyre Adventor';
+  src: url('/fonts/texgyreadventor-bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'TeX Gyre Heros';
+  src: url('/fonts/texgyreheros-regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'TeX Gyre Heros';
+  src: url('/fonts/texgyreheros-bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
 
-  --color-crema: #F4ECD8;        /* fondo de la app */
-  --color-crema-claro: #FAF4E6;  /* encabezados de tabla, prefijos */
-  --color-panel: #FBF4E4;        /* panel "Café a tostar" */
-  --color-trigo: #F3E5C8;        /* seleccionado suave, total de remisión */
-  --color-arena: #E9DCC0;        /* bordes de tarjetas */
-  --color-arena-oscuro: #E2D2AE; /* bordes de opciones */
-  --color-dorado: #C8A46E;       /* bordes de campos, acento */
-  --color-dorado-oscuro: #9C7A44;
-  --color-vino: #7B1E22;         /* marca, botón principal */
-  --color-vino-oscuro: #5E161A;
-  --color-cafe: #2B1A12;         /* texto */
-  --color-cafe-medio: #4A3426;
-  --color-cafe-suave: #6B5444;   /* texto secundario */
+/* Colores y fuentes del diseño "Registro de tostión" (Don Manolo).
+   Se suman a los colores de Tailwind, no los reemplazan. */
+@theme {
+  --font-display: 'TeX Gyre Adventor', 'Century Gothic', 'Avant Garde', sans-serif;
+  --font-body: 'TeX Gyre Heros', Arial, Helvetica, sans-serif;
+  --font-sans: var(--font-body);
+
+  /* Paleta verde: del oliva al esmeralda */
+  --color-verde-olivo: #66782F;      /* etapas hechas, badges de proceso, aro del logo */
+  --color-verde-musgo: #4E7A3A;
+  --color-verde-hoja: #2E8A50;
+  --color-esmeralda: #0F7A55;        /* botones principales, estados activos, íconos (texto encima: blanco) */
+  --color-esmeralda-oscuro: #0B5E42; /* hover del botón; texto de acento (totales, enlaces) */
+  --color-verde-botella: #133B2C;    /* texto sobre fondos verdes claros */
+  --color-bosque: #122620;           /* texto principal, encabezados */
+  --color-verde-salvia: #8FAE98;     /* bordes de campos, detalles secundarios */
+  --color-verde-menta: #DDF0E3;      /* fondos suaves, resaltados, éxito */
+
+  /* Neutros con tinte verde */
+  --color-rocio: #F3F7F2;            /* fondo de la app */
+  --color-rocio-claro: #EAF3EC;      /* encabezados de tabla, prefijos, hover */
+  --color-panel: #EEF6EE;            /* panel "Café a tostar" */
+  --color-linea: #D9E5DB;            /* bordes de tarjetas */
+  --color-linea-oscuro: #C3D6C7;     /* bordes de opciones */
+  --color-pizarra: #34473D;
+  --color-pizarra-suave: #52665A;    /* texto secundario */
   --color-peligro: #B42318;
   --color-whatsapp: #ECE5DD;
 }
@@ -27,11 +66,14 @@
   }
   body {
     margin: 0;
-    background: var(--color-crema);
-    color: var(--color-cafe);
-    font-family: var(--font-sans);
+    background: var(--color-rocio);
+    color: var(--color-bosque);
+    font-family: var(--font-body);
     font-size: 16px;
     line-height: 1.45;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
   }
   input, select, button, textarea {
     font: inherit;
@@ -45,7 +87,7 @@
     cursor: default;
   }
   :focus-visible {
-    outline: 3px solid var(--color-dorado);
+    outline: 3px solid var(--color-esmeralda);
     outline-offset: 2px;
   }
   dl, dd {

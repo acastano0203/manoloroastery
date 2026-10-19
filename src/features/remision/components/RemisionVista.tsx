@@ -36,9 +36,9 @@ function Remision({ r }: { r: Registro }) {
           <CompartirAcciones rem={rem} celularTxt={datos.celularTxt} />
           {rem.aviso && <Alert kind="ok">{rem.aviso}</Alert>}
           {rem.fallback && (
-            <div role="status" className="flex flex-col gap-2.5 rounded-xl border-2 border-dorado bg-white p-4">
+            <div role="status" className="flex flex-col gap-2.5 rounded-xl border-2 border-verde-salvia bg-white p-4">
               <div className="font-bold">PDF descargado: {rem.pdfName}</div>
-              <div className="text-[15px] text-cafe-medio">
+              <div className="text-[15px] text-pizarra">
                 En el chat del cliente toca el ícono de adjuntar, elige Documento y selecciona el PDF. El texto ya queda escrito.
               </div>
               <a href={rem.waUrl} target="_blank" rel="noopener" className={buttonClass('secondary', 'lg')}>

@@ -7,7 +7,7 @@ export function SalirButton() {
     <button
       type="button"
       onClick={() => void salir()}
-      className="flex min-h-11 w-full items-center gap-3 rounded-[10px] px-3.5 text-left text-[15px] text-cafe-suave hover:bg-crema-claro"
+      className="flex min-h-11 w-full items-center gap-3 rounded-[10px] px-3.5 text-left text-[15px] text-pizarra-suave hover:bg-rocio-claro"
     >
       <Icon name="salir" size={20} />
       <span className="min-w-0">

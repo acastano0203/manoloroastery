@@ -7,15 +7,18 @@ import { Icon } from '../../../../components/ui/Icon'
 import { Loading } from '../../../../components/ui/Loading'
 import { PageHeading } from '../../../../components/ui/PageHeading'
 import { fecha } from '../../../../lib/format'
-import { estaEntregado } from '../../etapas'
+import { estaEntregado, yaEsta } from '../../etapas'
+import { usePermisos } from '../../../admin/hooks/usePermisos'
 import { useRegistros } from '../../hooks/useRegistros'
 import type { Registro } from '../../types'
 import { calcularCobro, esEditable, registroACsv } from '../../utils'
 import { AvisoRegistros } from '../AvisoRegistros'
 import { CobroResumen } from './CobroResumen'
+import { AlmacenamientoDetalle } from './AlmacenamientoDetalle'
 import { DatosRegistro } from './DatosRegistro'
 import { EstadoEnvio } from './EstadoEnvio'
 import { EtapaPanel } from './EtapaPanel'
+import { CurvaTostion } from '../../../tostiones/components/CurvaTostion'
 
 function Eliminar({ r }: { r: Registro }) {
   const { eliminar } = useRegistros()
@@ -43,6 +46,7 @@ function Eliminar({ r }: { r: Registro }) {
 
 export function RegistroDetalle({ id }: { id: string }) {
   const { registros, cargando, aviso } = useRegistros()
+  const { puede } = usePermisos()
   const r = registros.find((x) => x.id === id)
   const csvHref = useMemo(() => (r ? 'data:text/csv;charset=utf-8,' + encodeURIComponent(registroACsv(r)) : '#'), [r])
 
@@ -54,12 +58,18 @@ export function RegistroDetalle({ id }: { id: string }) {
       <PageHeading title={r.cliente} hideTitleOnMobile={false} back={{ to: '/', label: 'Registros' }}
         subtitle={`Lote ${r.codigo} · ${fecha(r.fecha, true)}`} />
       {aviso && <AvisoRegistros />}
+      {r.reabiertoAt && r.estado !== 'Enviado' && (
+        <Alert kind="neutral">Reabierto el {fecha(r.reabiertoAt.slice(0, 10), true)}. Ya estaba en contabilidad: después de modificarlo, envíalo otra vez.</Alert>
+      )}
       <EtapaPanel r={r} />
+      {yaEsta(r, 'Tostado') && <CurvaTostion r={r} />}
       {estaEntregado(r) && <EstadoEnvio r={r} />}
-      <CobroResumen c={calcularCobro(r, r.precios)} pago={r.pago ?? 'Sin dato'} />
+      {estaEntregado(r) && <AlmacenamientoDetalle r={r} />}
+      {/* El cobro sale del café a tostar, que se anota al tostar. */}
+      {yaEsta(r, 'Tostado') && <CobroResumen c={calcularCobro(r, r.precios)} pago={r.pago ?? 'Sin dato'} />}
       <DatosRegistro r={r} />
       <div className="flex flex-wrap gap-2">
-        {esEditable(r) && (
+        {esEditable(r) && puede('nuevo_lote') && (
           <Link to={`/registros/${r.id}/editar`} className={buttonClass('outline', 'lg', 'flex-1')}>
             <Icon name="editar" size={20} />
             Editar
@@ -69,7 +79,7 @@ export function RegistroDetalle({ id }: { id: string }) {
           <Icon name="descargar" size={20} />
           Exportar Excel/CSV
         </a>
-        {esEditable(r) && <Eliminar r={r} />}
+        {esEditable(r) && puede('nuevo_lote') && <Eliminar r={r} />}
       </div>
     </main>
   )

@@ -13,7 +13,7 @@ export function TextInput({ error, className, id, ...props }: Props) {
       aria-describedby={error && id ? `${id}-error` : undefined}
       className={cx(
         'h-14 w-full min-w-0 rounded-[10px] bg-white px-4 text-lg',
-        error ? 'border-2 border-peligro' : 'border border-dorado',
+        error ? 'border-2 border-peligro' : 'border border-verde-salvia focus:border-esmeralda',
         className,
       )}
       {...props}

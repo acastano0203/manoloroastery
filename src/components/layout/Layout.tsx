@@ -11,7 +11,7 @@ export function Layout() {
   }, [pathname])
 
   return (
-    <div className="flex min-h-screen flex-col md:flex-row">
+    <div className="flex min-h-screen flex-col bg-rocio text-bosque md:flex-row">
       <Sidebar />
       <MobileHeader />
       <div className="flex min-h-[calc(100vh-4rem)] min-w-0 flex-1 flex-col md:min-h-screen">

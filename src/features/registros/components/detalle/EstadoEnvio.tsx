@@ -3,14 +3,15 @@ import { Button } from '../../../../components/ui/Button'
 import { buttonClass } from '../../../../components/ui/buttonClass'
 import { Icon } from '../../../../components/ui/Icon'
 import { cx } from '../../../../lib/cx'
+import { usePermisos } from '../../../admin/hooks/usePermisos'
 import { useRegistros } from '../../hooks/useRegistros'
 import type { Estado, Registro } from '../../types'
 
 const cajas: Record<Estado, { caja: string; punto: string; titulo: string }> = {
   Error: { caja: 'bg-red-50 border-red-200 text-red-900', punto: 'bg-peligro', titulo: 'Error al enviar' },
-  Enviando: { caja: 'bg-crema border-dorado text-cafe', punto: 'bg-cafe-suave', titulo: 'Enviando…' },
+  Enviando: { caja: 'bg-rocio border-verde-salvia text-bosque', punto: 'bg-pizarra-suave', titulo: 'Enviando…' },
   Pendiente: { caja: 'bg-amber-50 border-amber-200 text-amber-900', punto: 'bg-amber-600', titulo: 'Pendiente de enviar' },
-  Enviado: { caja: 'bg-green-50 border-green-200 text-green-900', punto: 'bg-green-700', titulo: 'Enviado · Remisión lista' },
+  Enviado: { caja: 'bg-verde-menta/50 border-verde-salvia text-verde-botella', punto: 'bg-verde-hoja', titulo: 'Enviado · Remisión lista' },
 }
 
 function texto(r: Registro) {
@@ -26,6 +27,7 @@ function texto(r: Registro) {
 
 export function EstadoEnvio({ r }: { r: Registro }) {
   const { enviar } = useRegistros()
+  const { puede } = usePermisos()
   const caja = cajas[r.estado]
   return (
     <section aria-label="Estado de envío" className={cx('flex flex-wrap items-center gap-4 rounded-[14px] border px-5 py-[18px]', caja.caja)}>
@@ -36,7 +38,7 @@ export function EstadoEnvio({ r }: { r: Registro }) {
           <div className="text-[15px]">{texto(r)}</div>
         </div>
       </div>
-      {r.estado !== 'Enviado' && (
+      {r.estado !== 'Enviado' && puede('tablero') && (
         <Button size="lg" onClick={() => void enviar(r.id)} disabled={r.estado === 'Enviando'} className="w-full font-bold sm:w-auto">
           <Icon name="enviar" size={20} />
           {r.estado === 'Enviando' ? 'Enviando…' : r.estado === 'Error' ? 'Reenviar' : 'Enviar'}

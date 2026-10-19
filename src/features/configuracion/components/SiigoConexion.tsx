@@ -9,9 +9,9 @@ import { probarConexionSiigo } from '../services/siigoService'
 import type { EstadoConexion } from '../types'
 
 const ESTADOS: Record<EstadoConexion, { label: string; badge: string; punto: string }> = {
-  sin: { label: 'Sin probar', badge: 'bg-crema-claro text-cafe-medio', punto: 'bg-[#B8A88E]' },
+  sin: { label: 'Sin probar', badge: 'bg-rocio-claro text-pizarra', punto: 'bg-verde-salvia' },
   probando: { label: 'Probando…', badge: 'bg-amber-100 text-amber-800', punto: 'bg-amber-600' },
-  ok: { label: 'Conectado', badge: 'bg-green-100 text-green-800', punto: 'bg-green-700' },
+  ok: { label: 'Conectado', badge: 'bg-verde-menta text-verde-botella', punto: 'bg-verde-hoja' },
   error: { label: 'Sin conexión', badge: 'bg-red-100 text-red-800', punto: 'bg-peligro' },
 }
 

@@ -32,9 +32,9 @@ export function OptionGroup<T extends string>({
               aria-pressed={on}
               onClick={() => onChange(op)}
               className={cx(
-                'rounded-xl border-2 px-3 font-bold text-cafe',
+                'rounded-xl border-2 px-3 font-bold text-bosque',
                 big ? 'h-16 text-lg' : 'h-14 text-[17px]',
-                on ? 'border-dorado-oscuro bg-dorado' : 'border-arena-oscuro bg-white hover:bg-crema-claro',
+                on ? 'border-esmeralda bg-esmeralda/15' : 'border-linea-oscuro bg-white hover:bg-rocio-claro',
               )}
             >
               {optionLabel ? optionLabel(op) : op}

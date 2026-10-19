@@ -59,7 +59,7 @@ export function ClientesPanel() {
   return (
     <main className="mx-auto flex w-full max-w-[1000px] flex-1 flex-col gap-5 px-4 pb-16 pt-6">
       <PageHeading
-        title={<>Clientes <span className="text-lg font-semibold text-cafe-suave">({clientes.length})</span></>}
+        title={<>Clientes <span className="text-lg font-semibold text-pizarra-suave">({clientes.length})</span></>}
         subtitle="Se usan en el formulario para cargar nombre, celular y datos de factura."
         action={!editando && (
           <Button size="lg" onClick={() => { setMsg(null); setEditando('nuevo') }} className="w-full sm:w-auto">
@@ -88,7 +88,7 @@ export function ClientesPanel() {
             <ClienteItem key={k.id} cliente={k} nRegistros={usos.get(k.id) ?? 0} onEditar={() => editar(k)} onEliminar={() => void borrar(k)} />
           ))}
           {lista.length === 0 && (
-            <div className="px-4 py-6 text-center text-cafe-suave">
+            <div className="px-4 py-6 text-center text-pizarra-suave">
               {clientes.length ? 'No hay clientes con esa búsqueda.' : 'Aún no hay clientes. Crea el primero con «Nuevo cliente» o desde «Nuevo lote».'}
             </div>
           )}

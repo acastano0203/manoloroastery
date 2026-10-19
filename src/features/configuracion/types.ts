@@ -5,6 +5,8 @@ export interface Precios {
   p340: number
   p500: number
   p2500: number
+  /** Precio por drip (unidad). */
+  pDrip: number
 }
 
 export interface Configuracion {

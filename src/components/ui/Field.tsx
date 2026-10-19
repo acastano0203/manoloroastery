@@ -19,7 +19,7 @@ export function Field({ label, htmlFor, error, hint, className, children }: Prop
         {label}
       </label>
       {children}
-      {hint && <p className="m-0 text-sm text-cafe-suave">{hint}</p>}
+      {hint && <p className="m-0 text-sm text-pizarra-suave">{hint}</p>}
       {error && <FieldError id={`${htmlFor}-error`}>{error}</FieldError>}
     </div>
   )

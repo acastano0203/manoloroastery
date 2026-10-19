@@ -2,9 +2,9 @@ import { cx } from '../../../lib/cx'
 import type { Estado } from '../types'
 
 const colores: Record<Estado, string> = {
-  Enviado: 'bg-green-100 text-green-800',
+  Enviado: 'bg-verde-menta text-verde-botella',
   Error: 'bg-red-100 text-red-800',
-  Enviando: 'bg-arena text-cafe',
+  Enviando: 'bg-linea text-bosque',
   Pendiente: 'bg-amber-100 text-amber-800',
 }
 
