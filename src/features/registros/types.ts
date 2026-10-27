@@ -9,9 +9,13 @@ export type Pago = Enums['forma_pago']
 export type Proceso = Enums['proceso_cafe']
 export type Etapa = Enums['etapa_lote']
 export type Llegada = Enums['llegada_cafe']
+export type Presentacion = Enums['presentacion']
+export type Molienda = Enums['molienda']
 
 export const PAGOS: readonly Pago[] = ['Efectivo', 'Banco', 'Bold']
-export const PROCESOS: readonly Proceso[] = ['Pergamino', 'Natural', 'Honey', 'Cofermentado']
+export const PRESENTACIONES: readonly Presentacion[] = ['Grano', 'Molido']
+export const MOLIENDAS: readonly Molienda[] = ['Fino', 'Medio', 'Grueso']
+export const PROCESOS: readonly Proceso[] = ['Pergamino', 'Natural', 'Honey', 'Cofermentado', 'En almendra (en verde)']
 
 export interface CantidadBolsas {
   n340: number
@@ -27,9 +31,13 @@ export interface Empaque extends CantidadBolsas {
   bolsasCliente: boolean
   /** Peso del café tostado, para la pérdida en el tueste. Vacío hasta empacar. */
   gramosTostado: number | null
+  /** Café tostado que no cupo en las bolsas y se entrega suelto, en gramos. Ya se cobra en la tostión. */
+  gramosSobrante: number | null
 }
 
 export interface RegistroDatos extends Empaque, DatosFactura {
+  /** Nombre del lote que trae el cliente desde la finca. Vacío: la base asigna el consecutivo (L-0013). */
+  codigo: string
   clienteId: string
   /** YYYY-MM-DD */
   fecha: string
@@ -49,7 +57,6 @@ export interface RegistroDatos extends Empaque, DatosFactura {
 
 export interface Registro extends RegistroDatos {
   id: string
-  codigo: string
   /** Estado de envío a contabilidad (Siigo), aparte de la etapa del lote. */
   estado: Estado
   etapa: Etapa
@@ -63,7 +70,17 @@ export interface Registro extends RegistroDatos {
   reabiertoAt: string | null
   /** Café que el cliente dejó guardado en la tostadora al entregar. null = no requiere almacenamiento. */
   almacenamiento: Almacenamiento | null
+  /** Descripción que se anota en cada etapa (cómo salió la trilla, observaciones de la tostión…). */
+  descripciones: Descripciones
+  /** Fecha y hora (ISO) en que llegó a cada etapa. Las de etapas que se deshicieron no están. */
+  fechasEtapas: Partial<Record<Etapa, string>>
+  /** En grano o molido: se pregunta al empacar. Vacío en lotes empacados antes. */
+  presentacion: Presentacion | null
+  /** Solo si es molido. */
+  molienda: Molienda | null
 }
+
+export type Descripciones = Partial<Record<Etapa, string>>
 
 /** Almacenamiento al entregar: 1 a 10 días, cuánto se guarda, cómo va marcado y la foto de evidencia. */
 export interface Almacenamiento {
@@ -99,6 +116,8 @@ export interface Aviso {
 
 /** Resultado de calcular el cobro de un registro. */
 export interface Cobro {
+  /** Con qué peso salió la tostión: el tostado (desde que se empaca) o la almendra (estimado antes de empacar). */
+  base: 'tostado' | 'almendra'
   libras: number
   tostion: number
   bolsas: number

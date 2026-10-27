@@ -8,9 +8,10 @@ type Permisos = ReturnType<typeof usePermisos>
 const ITEMS: Array<{ to: string; label: string; icon: IconName; activo: (path: string) => boolean; ve: (u: Permisos) => boolean }> = [
   { to: '/', label: 'Registros', icon: 'lista', activo: (p) => p === '/' || (p.startsWith('/registros/') && !p.endsWith('/editar')), ve: (u) => u.veLotes },
   { to: '/nuevo', label: 'Nuevo lote', icon: 'nuevo', activo: (p) => p === '/nuevo' || p.endsWith('/editar'), ve: (u) => u.puede('nuevo_lote') },
+  { to: '/reportes', label: 'Reportes', icon: 'grafica', activo: (p) => p.startsWith('/reportes'), ve: (u) => u.puede('reportes') },
   { to: '/clientes', label: 'Clientes', icon: 'usuarios', activo: (p) => p.startsWith('/clientes'), ve: (u) => u.puede('clientes') },
   { to: '/configuracion', label: 'Configuración', icon: 'config', activo: (p) => p.startsWith('/configuracion'), ve: (u) => u.puede('configuracion') },
-  { to: '/administracion', label: 'Administración', icon: 'escudo', activo: (p) => p.startsWith('/administracion'), ve: (u) => u.esAdmin },
+  { to: '/administracion', label: 'Administración', icon: 'escudo', activo: (p) => p.startsWith('/administracion'), ve: (u) => u.puede('administracion') },
 ]
 
 export function NavMenu({ onNavegar }: { onNavegar?: () => void }) {

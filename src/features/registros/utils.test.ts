@@ -23,6 +23,18 @@ describe('calcularCobro', () => {
     expect(c.librasTxt).toBe('8,50 lb')
   })
 
+  it('al empacar se cobra con el peso tostado; antes, se estima con la almendra', () => {
+    const almendra = calcularCobro({ gramos: 16000, gramosTostado: null, n340: 0, n500: 0, n2500: 0, nDrip: 0 }, precios)
+    expect(almendra.base).toBe('almendra')
+    expect(almendra.tostion).toBe(96000)
+    const tostado = calcularCobro({ gramos: 16000, gramosTostado: 13600, n340: 1, n500: 0, n2500: 0, nDrip: 0 }, precios)
+    expect(tostado.base).toBe('tostado')
+    expect(tostado.libras).toBe(27.2)
+    expect(tostado.tostion).toBe(81600)
+    expect(tostado.total).toBe(81600 + 1500)
+    expect(tostado.fLibras).toBe('13,6 kg tostado × 2')
+  })
+
   it('gramos vacíos o negativos no cobran tostión', () => {
     expect(calcularCobro({ gramos: -5, n340: 1, n500: 0, n2500: 0, nDrip: 0 }, precios).total).toBe(1500)
   })

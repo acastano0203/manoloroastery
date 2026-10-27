@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { mensajeError } from '../../../lib/errores'
-import { dec, parseG, parseKg } from '../../../lib/format'
+import { kg, parseG, parseKg, parseKgAG } from '../../../lib/format'
 import { useClientes } from '../../clientes/hooks/useClientes'
 import type { Cliente } from '../../clientes/types'
 import { useConfig } from '../../configuracion/hooks/useConfig'
@@ -41,14 +41,14 @@ export function useRegistroForm(registroId?: string) {
   const editaRecepcion = etapa === 'Recibido'
   const pideGramos = etapa === 'Tostado'
   const pideBolsas = etapa === 'Empacado'
-  // El cobro sale del peso en almendra: existe desde que el lote se tostó.
+  // El cobro existe desde que el lote se tostó: se estima con la almendra y, al empacar, sale del peso tostado.
   const conCobro = Boolean(existente && yaEsta(existente, 'Tostado'))
 
   const todos = useMemo(() => validarRegistro(form, pideGramos, pideBolsas), [form, pideGramos, pideBolsas])
   const mostrar = (k: CampoForm): string | false => (intentado || tocados[k] ? todos[k] ?? false : false)
   const errores = {
-    cliente: mostrar('cliente'), celular: mostrar('celular'), pago: intentado ? todos.pago ?? false : false,
-    kilos: mostrar('kilos'), humedad: mostrar('humedad'), densidad: mostrar('densidad'), gramos: mostrar('gramos'), gramosTostado: mostrar('gramosTostado'), numDoc: mostrar('numDoc'), correo: mostrar('correo'),
+    codigo: mostrar('codigo'), cliente: mostrar('cliente'), celular: mostrar('celular'), pago: intentado ? todos.pago ?? false : false,
+    kilos: mostrar('kilos'), humedad: mostrar('humedad'), densidad: mostrar('densidad'), gramos: mostrar('gramos'), gramosTostado: mostrar('gramosTostado'), gramosSobrante: mostrar('gramosSobrante'), numDoc: mostrar('numDoc'), correo: mostrar('correo'),
   }
 
   const set = (patch: Partial<FormRegistro>) => {
@@ -57,13 +57,15 @@ export function useRegistroForm(registroId?: string) {
   }
   const tocar = (k: CampoForm) => setTocados((t) => ({ ...t, [k]: true }))
 
-  const g = parseG(form.gramos)
+  const g = parseKgAG(form.gramos)
   const k = parseKg(form.kilos)
+  const t = parseKgAG(form.gramosTostado)
+  const tostadoForm = t !== null && !isNaN(t) && t > 0 ? t : null
   const cobro = config
-    ? calcularCobro({ ...form, gramos: g && g > 0 ? g : 0 }, config.precios)
+    ? calcularCobro({ ...form, gramos: g && g > 0 ? g : 0, gramosTostado: pideBolsas ? tostadoForm : existente?.gramosTostado ?? null }, config.precios)
     : null
   const avisoCantidad = g && k && g > 0 && k > 0 && g > k * 1000
-    ? `Es más de lo recibido (${dec(k * 1000, 0)} g). Revisa las cantidades.`
+    ? `Es más de lo recibido (${kg(k)} kg). Revisa las cantidades.`
     : null
 
   async function guardar() {
@@ -84,16 +86,19 @@ export function useRegistroForm(registroId?: string) {
       setForm((f) => ({ ...f, clienteId: cliente.id, clienteNuevo: false }))
 
       const datos: RegistroDatos = {
-        clienteId: cliente.id, fecha: editaRecepcion ? form.fecha : existente!.fecha, cliente: cliente.nombre, celular: cliente.celular,
+        codigo: form.codigo, clienteId: cliente.id, fecha: editaRecepcion ? form.fecha : existente!.fecha, cliente: cliente.nombre, celular: cliente.celular,
         factura: cliente.factura, tipoDoc: cliente.tipoDoc, numDoc: cliente.numDoc, correo: cliente.correo,
         pago: form.pago!, ...(editaRecepcion
           ? { proceso: form.proceso, kilos: k!, humedad: parseKg(form.humedad), densidad: parseKg(form.densidad) }
           : { proceso: existente!.proceso, kilos: existente!.kilos, humedad: existente!.humedad, densidad: existente!.densidad }), gramos: pideGramos ? g! : existente?.gramos ?? null, n340: form.n340, n500: form.n500, n2500: form.n2500, nDrip: form.nDrip,
-        bolsasCliente: form.bolsasCliente, gramosTostado: pideBolsas ? parseG(form.gramosTostado) : existente?.gramosTostado ?? null,
+        bolsasCliente: form.bolsasCliente, gramosTostado: pideBolsas ? parseKgAG(form.gramosTostado) : existente?.gramosTostado ?? null,
+        gramosSobrante: pideBolsas ? parseG(form.gramosSobrante) : existente?.gramosSobrante ?? null,
       }
+      // La descripción del recibo se cambia mientras el lote está en Recibido; las de otras etapas se conservan.
+      const descripciones = editaRecepcion ? { ...existente?.descripciones, Recibido: form.descripcion } : undefined
       const r = registroId
-        ? await actualizarRegistro(registroId, datos, config.precios)
-        : await crearRegistro(datos, config.precios)
+        ? await actualizarRegistro(registroId, datos, config.precios, descripciones)
+        : await crearRegistro(datos, config.precios, descripciones)
       await recargar()
       setAviso({ kind: 'ok', text: registroId ? `Cambios guardados en ${r.cliente}.` : `Lote ${r.codigo} guardado: ${r.cliente}. Está en ${r.etapa}.` })
       navigate(registroId ? `/registros/${r.id}` : '/')

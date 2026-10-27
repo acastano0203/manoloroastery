@@ -64,6 +64,51 @@ describe('Administración', () => {
     await waitFor(() => expect(servicio.cambiarPermiso).toHaveBeenCalledWith('r-tost', 'curvas', false))
   })
 
+  it('los permisos van por ítem del menú; Registros a medias muestra lo que tiene', () => {
+    render(<RolesAdmin api={api()} />)
+    const rol = screen.getByRole('region', { name: 'Rol Tostador' })
+    const menus = within(rol).getByRole('group', { name: 'Qué menús ve' })
+    const nombres = within(menus).getAllByRole('checkbox').map((c) => c.closest('label')!.querySelector('.font-semibold')!.textContent)
+    expect(nombres.slice(0, 1).concat(nombres.slice(-4))).toEqual(['Registros', 'Reportes', 'Clientes', 'Configuración', 'Administración'])
+    // Tostador tiene tablero y curvas: Registros marcado a medias, con sus opciones abajo.
+    const registros = within(rol).getByRole('checkbox', { name: /^Registros/ }) as HTMLInputElement
+    expect(registros.checked).toBe(true)
+    expect(registros.indeterminate).toBe(true)
+    expect((within(rol).getByRole('checkbox', { name: /^Nuevo lote/ }) as HTMLInputElement).checked).toBe(false)
+  })
+
+  it('marcar un menú da todos sus permisos; desmarcarlo los quita', async () => {
+    render(<RolesAdmin api={api()} />)
+    const rol = screen.getByRole('region', { name: 'Rol Tostador' })
+    fireEvent.click(within(rol).getByRole('checkbox', { name: /^Reportes/ }))
+    await waitFor(() => expect(servicio.cambiarPermiso).toHaveBeenCalledWith('r-tost', 'reportes', true))
+    vi.mocked(servicio.cambiarPermiso).mockClear()
+    fireEvent.click(within(rol).getByRole('checkbox', { name: /^Registros/ }))
+    await waitFor(() => expect(servicio.cambiarPermiso).toHaveBeenCalledTimes(2))
+    expect(servicio.cambiarPermiso).toHaveBeenCalledWith('r-tost', 'tablero', false)
+    expect(servicio.cambiarPermiso).toHaveBeenCalledWith('r-tost', 'curvas', false)
+  })
+
+  it('el menú Administración solo lo da el Administrador', () => {
+    yo.permisos = ['administracion']
+    render(<RolesAdmin api={api()} />)
+    const rol = screen.getByRole('region', { name: 'Rol Tostador' })
+    expect((within(rol).getByRole('checkbox', { name: /^Administración/ }) as HTMLInputElement).disabled).toBe(true)
+    cleanup()
+    yo.esAdmin = true
+    render(<RolesAdmin api={api()} />)
+    expect((within(screen.getByRole('region', { name: 'Rol Tostador' })).getByRole('checkbox', { name: /^Administración/ }) as HTMLInputElement).disabled).toBe(false)
+  })
+
+  it('con permiso de Administración (sin ser Administrador) entra, pero no reparte el rol Administrador', () => {
+    yo.permisos = ['administracion']
+    render(<MemoryRouter><ConPermiso admin><UsuariosAdmin api={api()} /></ConPermiso></MemoryRouter>)
+    const delAdmin = screen.getByRole('combobox', { name: 'Rol de admin@x.co' }) as HTMLSelectElement
+    expect(delAdmin.disabled).toBe(true)
+    const delNuevo = screen.getByRole('combobox', { name: 'Rol de nuevo@x.co' }) as HTMLSelectElement
+    expect((within(delNuevo).getByRole('option', { name: 'Administrador' }) as HTMLOptionElement).disabled).toBe(true)
+  })
+
   it('el rol Administrador ve todo y no se puede eliminar', () => {
     render(<RolesAdmin api={api()} />)
     const rol = screen.getByRole('region', { name: 'Rol Administrador' })

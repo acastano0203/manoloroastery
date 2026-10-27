@@ -17,8 +17,9 @@ describe('exportación del lote', () => {
     expect(dato('Pérdida en el tueste %')).toBe('15,0') // 16.000 g → 13.600 g
     expect(dato('Almacenamiento')).toBe('Sí')
     expect(dato('Días almacenado')).toBe('5')
-    expect(dato('Cantidad almacenada')).toBe('3 kg')
-    expect(dato('Gramos almacenados')).toBe('3000')
+    expect(dato('Kilos en almendra')).toBe('16')
+    expect(dato('Kilos tostado')).toBe('13,6')
+    expect(dato('Kilos almacenados')).toBe('3')
     expect(dato('Cómo va marcado')).toBe('Bolsa kraft')
   })
 

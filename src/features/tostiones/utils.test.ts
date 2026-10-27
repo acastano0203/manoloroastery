@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Lectura } from './types'
-import { lecturasCompletas, leerMmss, minutoFinal, mmss, resumenTiempos } from './utils'
+import { fasesTostion, lecturasCompletas, leerMmss, minutoFinal, mmss } from './utils'
 
 const l = (segundo: number, p: Partial<Lectura> = {}): Lectura =>
   ({ id: String(segundo), segundo, tempGrano: null, tempTambor: null, aire: null, llama: null, ...p })
@@ -14,10 +14,21 @@ describe('tiempos de la tostión', () => {
     expect(leerMmss('2:75')).toBeNaN()
   })
 
-  it('desarrollo y DTR salen del primer crack y la descarga', () => {
-    // crack 8:00, descarga 10:00 → 2:00 de desarrollo, 20 % del total
-    expect(resumenTiempos({ crackSeg: 480, descargaSeg: 600 })).toEqual({ total: 600, desarrollo: 120, dtr: 20 })
-    expect(resumenTiempos({ crackSeg: null, descargaSeg: 600 }).desarrollo).toBeNull()
+  it('las tres fases salen del fin de secado, el crack y el fin de curva, como % del total', () => {
+    // secado 4:00, crack 8:00, fin 10:00 → 40 % secado, 40 % Maillard, 20 % desarrollo
+    expect(fasesTostion({ secadoSeg: 240, crackSeg: 480, descargaSeg: 600 })).toEqual({
+      total: 600,
+      secado: { seg: 240, pct: 40 },
+      maillard: { seg: 240, pct: 40 },
+      desarrollo: { seg: 120, pct: 20 },
+    })
+    // Sin fin de secado: no hay secado ni Maillard, pero sí desarrollo
+    const sinSecado = fasesTostion({ secadoSeg: null, crackSeg: 480, descargaSeg: 600 })
+    expect(sinSecado.secado.pct).toBeNull()
+    expect(sinSecado.maillard.pct).toBeNull()
+    expect(sinSecado.desarrollo.pct).toBe(20)
+    // Sin terminar la curva hay duraciones, pero todavía no porcentajes
+    expect(fasesTostion({ secadoSeg: 240, crackSeg: 480, descargaSeg: null }).maillard).toEqual({ seg: 240, pct: null })
   })
 })
 

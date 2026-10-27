@@ -5,7 +5,7 @@ import { NEGOCIO } from '../../remision/negocio'
 import type { Registro } from '../../registros/types'
 import { COLORES } from '../colores'
 import type { Tostion } from '../types'
-import { lecturasCompletas, minutoFinal, mmss, resumenTiempos } from '../utils'
+import { fasesTostion, lecturasCompletas, minutoFinal, mmss, type Fase } from '../utils'
 
 const W = 595, H = 842, L = 40, R = 555
 const oscuro = rgb('#122620'), gris = rgb('#52665A'), esmeralda = rgb('#0B5E42'), linea = rgb('#D9E5DB')
@@ -28,7 +28,8 @@ interface Datos {
 
 export function construirReporteTostion({ r, t, numero }: Datos): Uint8Array<ArrayBuffer> {
   const lecturas = lecturasCompletas(t)
-  const { desarrollo, dtr } = resumenTiempos(t)
+  const fases = fasesTostion(t)
+  const fase = (f: Fase) => (f.pct === null ? '—' : `${dec(f.pct, 1)} % (${mmss(f.seg!)})`)
   const minMax = minutoFinal(t)
   let o = ''
 
@@ -45,17 +46,19 @@ export function construirReporteTostion({ r, t, numero }: Datos): Uint8Array<Arr
     ['Cliente', r.cliente], ['Proceso', r.proceso], ['Café verde', `${miles(t.gramosVerde)} g`],
     ['Temp. de carga', t.tempCarga === null ? '—' : `${dec(t.tempCarga, 1)} °C`],
     ['Aire inicial', t.aireInicial === null ? '—' : `${t.aireInicial} %`], ['Llama inicial', t.llamaInicial === null ? '—' : `${t.llamaInicial} %`],
-    ['Primer crack', t.crackSeg === null ? '—' : mmss(t.crackSeg)], ['Descarga', t.descargaSeg === null ? '—' : mmss(t.descargaSeg)],
-    ['Desarrollo', desarrollo === null ? '—' : `${mmss(desarrollo)}${dtr === null ? '' : ` (DTR ${dec(dtr, 1)} %)`}`],
+    ['Fin de secado', t.secadoSeg === null ? '—' : mmss(t.secadoSeg)], ['Primer crack', t.crackSeg === null ? '—' : mmss(t.crackSeg)],
+    ['Fin de curva', t.descargaSeg === null ? '—' : mmss(t.descargaSeg)],
+    ['Secado', fase(fases.secado)], ['Maillard', fase(fases.maillard)], ['Desarrollo (DTR)', fase(fases.desarrollo)],
   ]
   datos.forEach(([k, v], i) => {
-    const x = L + (i % 3) * 172, y = 742 - Math.floor(i / 3) * 30
+    // Cuatro renglones: deben caber antes del título de la curva (y = 640).
+    const x = L + (i % 3) * 172, y = 742 - Math.floor(i / 3) * 26
     o += T(x, y, k.toUpperCase(), 7, true, gris)
     o += T(x, y - 12, v, 10.5, true)
   })
 
   // Curva de temperaturas
-  const temps = lecturas.flatMap((l) => [l.tempGrano, l.tempTambor]).filter((v): v is number => v !== null)
+  const temps = lecturas.map((l) => l.tempGrano).filter((v): v is number => v !== null)
   // El eje arranca un poco por debajo de la temperatura más baja (no en 0): así la curva usa todo el alto.
   const tMin = temps.length ? Math.max(0, Math.floor(Math.min(...temps) / 50) * 50 - 50) : 0
   const tMax = temps.length ? Math.max(250, Math.ceil(Math.max(...temps) / 50) * 50) : 250
@@ -63,8 +66,7 @@ export function construirReporteTostion({ r, t, numero }: Datos): Uint8Array<Arr
   const X = (seg: number) => gx0 + (seg / 60 / minMax) * (gx1 - gx0)
   const Y = (v: number) => gy0 + ((v - tMin) / (tMax - tMin)) * (gy1 - gy0)
   o += T(L, 640, 'Curva de temperatura (°C)', 10, true)
-  o += `${COLORES.grano.pdf} rg ${R - 160} 642 10 3 re f\n` + T(R - 146, 640, 'Grano', 8.5, false, gris)
-  o += `${COLORES.tambor.pdf} rg ${R - 90} 642 10 3 re f\n` + T(R - 76, 640, 'Tambor', 8.5, false, gris)
+  o += `${COLORES.grano.pdf} rg ${R - 90} 642 10 3 re f\n` + T(R - 76, 640, 'Grano', 8.5, false, gris)
   for (let v = tMin; v <= tMax; v += 50) {
     o += raya(gx0, Y(v), gx1, Y(v))
     o += TR(gx0 - 5, Y(v) - 3, String(v), 7.5, false, gris)
@@ -75,8 +77,9 @@ export function construirReporteTostion({ r, t, numero }: Datos): Uint8Array<Arr
     o += TC(X(m * 60), gy0 - 12, String(m), 7.5, false, gris)
   }
   o += TC((gx0 + gx1) / 2, gy0 - 24, 'minutos', 7.5, false, gris)
-  // Cada marca en su renglón (crack arriba, descarga abajo) para que no se pisen si quedan cerca.
-  for (const [seg, nombre, yTexto] of [[t.crackSeg, '1er crack', gy1 - 9], [t.descargaSeg, 'Descarga', gy1 - 20]] as const) {
+  // Cada marca en su renglón (secado arriba, fin de curva abajo) para que no se pisen si quedan cerca.
+  const marcas = [[t.secadoSeg, 'Fin de secado', gy1 - 9], [t.crackSeg, '1er crack', gy1 - 20], [t.descargaSeg, 'Fin de curva', gy1 - 31]] as const
+  for (const [seg, nombre, yTexto] of marcas) {
     if (seg === null) continue
     o += raya(X(seg), gy0, X(seg), gy1, gris, 0.8, '3 2')
     const texto = `${nombre} ${mmss(seg)}`
@@ -85,14 +88,11 @@ export function construirReporteTostion({ r, t, numero }: Datos): Uint8Array<Arr
       ? TR(X(seg) - 3, yTexto, texto, 7.5, true, gris)
       : T(X(seg) + 3, yTexto, texto, 7.5, true, gris)
   }
-  for (const serie of ['grano', 'tambor'] as const) {
-    const pts = lecturas
-      .map((l) => [l.segundo, serie === 'grano' ? l.tempGrano : l.tempTambor] as const)
-      .filter((p): p is readonly [number, number] => p[1] !== null)
-      .map(([s, v]): [number, number] => [X(s), Y(v)])
-    o += polilinea(pts, COLORES[serie].pdf)
-    for (const p of pts) o += punto(p, COLORES[serie].pdf)
-  }
+  const curva = lecturas
+    .filter((l) => l.tempGrano !== null)
+    .map((l): [number, number] => [X(l.segundo), Y(l.tempGrano!)])
+  o += polilinea(curva, COLORES.grano.pdf)
+  for (const p of curva) o += punto(p, COLORES.grano.pdf)
 
   // Aire y llama (0–100 %), en escalones: el valor sigue hasta el siguiente cambio
   const ay0 = 318, ay1 = 372
@@ -123,17 +123,16 @@ export function construirReporteTostion({ r, t, numero }: Datos): Uint8Array<Arr
   columnas.forEach((filas, c) => {
     if (!filas.length) return
     const x = L + c * 262
-    const cx = [x, x + 50, x + 110, x + 170, x + 220]
+    const cx = [x, x + 55, x + 125, x + 185]
     let y = 276
-    ;['Min', 'Grano °C', 'Tambor °C', 'Aire %', 'Llama %'].forEach((h, i) => { o += T(cx[i], y, h, 7.5, true, gris) })
+    ;['Min', 'Grano °C', 'Aire %', 'Llama %'].forEach((h, i) => { o += T(cx[i], y, h, 7.5, true, gris) })
     o += raya(x, y - 4, x + 250, y - 4)
     for (const l of filas) {
       y -= 11.5
       o += T(cx[0], y, mmss(l.segundo), 8.5)
       o += T(cx[1], y, l.tempGrano === null ? '—' : dec(l.tempGrano, 1), 8.5)
-      o += T(cx[2], y, l.tempTambor === null ? '—' : dec(l.tempTambor, 1), 8.5)
-      o += T(cx[3], y, l.aire === null ? '—' : String(l.aire), 8.5)
-      o += T(cx[4], y, l.llama === null ? '—' : String(l.llama), 8.5)
+      o += T(cx[2], y, l.aire === null ? '—' : String(l.aire), 8.5)
+      o += T(cx[3], y, l.llama === null ? '—' : String(l.llama), 8.5)
     }
   })
   if (!lecturas.length) o += T(L, 276, 'Sin lecturas registradas.', 9, false, gris)

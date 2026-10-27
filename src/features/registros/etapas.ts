@@ -43,3 +43,12 @@ export const yaEsta = (r: Pick<Registro, 'etapa'>, etapa: Etapa) => pos(r.etapa)
 
 /** La remisión, el WhatsApp y el envío a contabilidad se hacen al entregar. */
 export const estaEntregado = (r: Pick<Registro, 'etapa'>) => r.etapa === 'Entregado'
+
+/**
+ * Orden de llegada a la etapa en que está cada lote: el que llegó primero va primero (es el que está en turno).
+ * Los que no tienen la hora anotada (movidos antes de guardarla) van al principio, del más viejo al más nuevo.
+ */
+export function ordenDeLlegada<T extends Pick<Registro, 'etapa' | 'fechasEtapas'>>(lotes: readonly T[]): T[] {
+  const llegada = (r: T) => r.fechasEtapas[r.etapa] ?? ''
+  return [...lotes].sort((a, b) => llegada(a).localeCompare(llegada(b)))
+}

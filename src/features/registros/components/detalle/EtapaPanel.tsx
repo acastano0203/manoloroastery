@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Button } from '../../../../components/ui/Button'
 import { Icon } from '../../../../components/ui/Icon'
 import { cx } from '../../../../lib/cx'
+import { fechaHora } from '../../../../lib/format'
 import { ETAPAS, etapaAnterior, etapasDe } from '../../etapas'
 import { usePermisos } from '../../../admin/hooks/usePermisos'
 import { useRegistros } from '../../hooks/useRegistros'
@@ -43,6 +44,11 @@ export function EtapaPanel({ r }: { r: Registro }) {
                 {hecho ? <Icon name="check" size={18} /> : etapas.indexOf(e) + 1}
               </span>
               <span className={cx('text-[13px] leading-tight [overflow-wrap:anywhere]', aqui ? 'font-bold text-esmeralda-oscuro' : 'text-pizarra')}>{e}</span>
+              {r.fechasEtapas[e] && (
+                <time dateTime={r.fechasEtapas[e]} className="text-xs leading-tight text-pizarra-suave tabular-nums">
+                  {fechaHora(r.fechasEtapas[e]).split(' · ').map((parte) => <span key={parte} className="block">{parte}</span>)}
+                </time>
+              )}
             </li>
           )
         })}

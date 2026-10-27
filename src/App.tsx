@@ -14,6 +14,7 @@ import { LoginPage } from './pages/LoginPage'
 import { NuevoRegistroPage } from './pages/NuevoRegistroPage'
 import { RegistrosPage } from './pages/RegistrosPage'
 import { RemisionPage } from './pages/RemisionPage'
+import { ReportesPage } from './pages/ReportesPage'
 import { SetupPage } from './pages/SetupPage'
 
 export default function App() {
@@ -42,6 +43,7 @@ export default function App() {
             <Route path="registros/:id" element={<ConPermiso lotes><DetalleRegistroPage /></ConPermiso>} />
             <Route path="registros/:id/editar" element={<ConPermiso p="nuevo_lote"><NuevoRegistroPage /></ConPermiso>} />
             <Route path="registros/:id/remision" element={<ConPermiso lotes><RemisionPage /></ConPermiso>} />
+            <Route path="reportes" element={<ConPermiso p="reportes"><ReportesPage /></ConPermiso>} />
             <Route path="clientes" element={<ConPermiso p="clientes"><ClientesPage /></ConPermiso>} />
             <Route path="configuracion" element={<ConPermiso p="configuracion"><ConfiguracionPage /></ConPermiso>} />
             <Route path="administracion" element={<ConPermiso admin><AdministracionPage /></ConPermiso>} />

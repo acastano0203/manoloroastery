@@ -1,13 +1,14 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 import { mensajeError } from '../../../lib/errores'
 import { suscribirCambios } from '../../../lib/realtime'
-import { guardarConfiguracion, obtenerConfiguracion } from '../services/configService'
-import type { Configuracion } from '../types'
+import { ajustarInventario, guardarConfiguracion, obtenerConfiguracion } from '../services/configService'
+import type { Configuracion, Inventario } from '../types'
 
 interface ConfigValue {
   config: Configuracion | null
   error: string | null
-  guardar: (c: Configuracion) => Promise<void>
+  /** Guarda precios y Siigo; con cambios de inventario, también fija esas cantidades. */
+  guardar: (c: Configuracion, inventario?: Partial<Inventario>) => Promise<void>
 }
 
 const ConfigContext = createContext<ConfigValue | null>(null)
@@ -30,13 +31,19 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
     return suscribirCambios('configuracion', recargar)
   }, [recargar])
 
-  const guardar = useCallback(async (c: Configuracion) => {
+  const guardar = useCallback(async (c: Configuracion, inventario: Partial<Inventario> = {}) => {
     await guardarConfiguracion(c)
-    setConfig(c)
-  }, [])
+    await ajustarInventario(c.id, inventario)
+    // El inventario se vuelve a leer: la base pudo descontar bolsas mientras tanto.
+    setConfig({ ...c, inventario: { ...c.inventario, ...inventario } })
+    void recargar()
+  }, [recargar])
 
   return <ConfigContext.Provider value={{ config, error, guardar }}>{children}</ConfigContext.Provider>
 }
+
+/** Igual que useConfig, pero sin fallar fuera de <ConfigProvider> (para componentes que solo muestran datos). */
+export const useConfigOpcional = () => useContext(ConfigContext)
 
 export function useConfig() {
   const ctx = useContext(ConfigContext)

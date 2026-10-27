@@ -4,6 +4,7 @@ import { FieldError } from '../../../components/ui/FieldError'
 import { Icon } from '../../../components/ui/Icon'
 import { mensajeError } from '../../../lib/errores'
 import type { AdminApi } from '../hooks/useAdmin'
+import { usePermisos } from '../hooks/usePermisos'
 import { crearUsuario } from '../services/adminService'
 
 const CLAVE_MINIMA = 8
@@ -28,6 +29,7 @@ function validar(correo: string, clave: string, rolId: string): Errores {
 /** Formulario para que el administrador cree un usuario con su rol. */
 export function CrearUsuario({ api }: { api: AdminApi }) {
   const id = useId()
+  const { esAdmin } = usePermisos()
   const [abierto, setAbierto] = useState(false)
   const [correo, setCorreo] = useState('')
   const [nombre, setNombre] = useState('')
@@ -122,7 +124,7 @@ export function CrearUsuario({ api }: { api: AdminApi }) {
               <select id={`${id}-rol`} value={rolId} onChange={(e) => setRolId(e.target.value)} aria-invalid={errores.rol ? true : undefined}
                 className="h-12 rounded-[10px] border border-verde-salvia bg-white px-3 text-[16px] font-semibold">
                 <option value="">Elige un rol</option>
-                {api.roles.map((r) => <option key={r.id} value={r.id}>{r.nombre}</option>)}
+                {api.roles.filter((r) => esAdmin || !r.administrador).map((r) => <option key={r.id} value={r.id}>{r.nombre}</option>)}
               </select>
               {errores.rol && <FieldError>{errores.rol}</FieldError>}
             </div>

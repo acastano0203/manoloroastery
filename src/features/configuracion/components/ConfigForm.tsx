@@ -8,6 +8,7 @@ import { mensajeError } from '../../../lib/errores'
 import { miles } from '../../../lib/format'
 import { useConfig } from '../hooks/useConfig'
 import type { Precios } from '../types'
+import { cambiosInventario, InventarioBolsas, type InventarioBorrador } from './InventarioBolsas'
 import { PrecioInput } from './PrecioInput'
 import { SiigoConexion } from './SiigoConexion'
 
@@ -19,6 +20,8 @@ export function ConfigForm() {
   const { config, error, guardar } = useConfig()
   const [borrador, setBorrador] = useState<Borrador | null>(null)
   const [usuario, setUsuario] = useState('')
+  // Solo las cantidades que se escribieron: las demás muestran lo que hay ahora (la base las va descontando).
+  const [inventario, setInventario] = useState<InventarioBorrador>({})
   const [msg, setMsg] = useState<{ kind: AlertKind; text: string } | null>(null)
   const [guardando, setGuardando] = useState(false)
 
@@ -43,7 +46,8 @@ export function ConfigForm() {
     if (!precios.lb) return setMsg({ kind: 'error', text: 'El precio por libra debe ser mayor que 0.' })
     setGuardando(true)
     try {
-      await guardar({ ...config, precios, siigoUsuario: usuario })
+      await guardar({ ...config, precios, siigoUsuario: usuario }, cambiosInventario(inventario, config.inventario))
+      setInventario({})
       setMsg({ kind: 'ok', text: 'Configuración guardada. Los nuevos precios aplican a los lotes nuevos.' })
     } catch (e) {
       setMsg({ kind: 'error', text: mensajeError(e) })
@@ -66,6 +70,8 @@ export function ConfigForm() {
           <PrecioInput id="pDrip" label="Drip (unidad)" value={borrador.pDrip} onChange={set('pDrip')} />
         </div>
       </Card>
+      <InventarioBolsas inventario={config.inventario} borrador={inventario}
+        cambiar={(k, v) => { setInventario((b) => ({ ...b, [k]: v })); setMsg(null) }} />
       <SiigoConexion usuario={usuario} onUsuario={(v) => { setUsuario(v); setMsg(null) }} />
       <div className="flex flex-col gap-2.5">
         <Button size="xxl" onClick={onGuardar} disabled={guardando} className="font-bold">

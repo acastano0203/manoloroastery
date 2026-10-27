@@ -70,6 +70,8 @@ export type Database = {
           n_drip: number
           precio_drip: number
           gramos_tostado: number | null
+          /** Café tostado que sobró al empacar, en gramos. */
+          gramos_sobrante: number | null
           almacenamiento: boolean
           almacen_dias: number | null
           almacen_gramos: number | null
@@ -77,6 +79,10 @@ export type Database = {
           almacen_foto: string | null
           almacen_unidad: 'g' | 'kg' | 'lb'
           reabierto_at: string | null
+          /** Descripción de cada etapa: { "Trillado": "..." }. */
+          descripciones: Partial<Record<Database['public']['Enums']['etapa_lote'], string>>
+          /** Cuándo llegó a cada etapa (ISO). La anota un trigger al cambiar de etapa. */
+          fechas_etapas: Partial<Record<Database['public']['Enums']['etapa_lote'], string>>
           nivel_tueste: Database['public']['Enums']['nivel_tueste'] | null
           presentacion: Database['public']['Enums']['presentacion'] | null
           molienda: Database['public']['Enums']['molienda'] | null
@@ -94,6 +100,7 @@ export type Database = {
         }
         Insert: {
           id?: string
+          codigo?: string
           user_id?: string | null
           cliente_id: string
           fecha?: string
@@ -123,6 +130,7 @@ export type Database = {
           n_drip?: number
           precio_drip?: number
           gramos_tostado?: number | null
+          gramos_sobrante?: number | null
           almacenamiento?: boolean
           almacen_dias?: number | null
           almacen_gramos?: number | null
@@ -130,6 +138,8 @@ export type Database = {
           almacen_foto?: string | null
           almacen_unidad?: 'g' | 'kg' | 'lb'
           reabierto_at?: string | null
+          descripciones?: Partial<Record<Database['public']['Enums']['etapa_lote'], string>>
+          fechas_etapas?: Partial<Record<Database['public']['Enums']['etapa_lote'], string>>
           nivel_tueste?: Database['public']['Enums']['nivel_tueste'] | null
           presentacion?: Database['public']['Enums']['presentacion'] | null
           molienda?: Database['public']['Enums']['molienda'] | null
@@ -172,6 +182,8 @@ export type Database = {
           iniciada_at: string | null
           aire_inicial: number | null
           llama_inicial: number | null
+          /** Fin de secado (grano amarillo), en segundos desde la carga. */
+          secado_seg: number | null
           crack_seg: number | null
           descarga_seg: number | null
           notas: string | null
@@ -193,6 +205,7 @@ export type Database = {
           iniciada_at?: string | null
           aire_inicial?: number | null
           llama_inicial?: number | null
+          secado_seg?: number | null
           crack_seg?: number | null
           descarga_seg?: number | null
           notas?: string | null
@@ -313,12 +326,20 @@ export type Database = {
           merma_min: number
           merma_max: number
           gas_por_bache: number | null
+          stock_340: number | null
+          stock_500: number | null
+          stock_2500: number | null
+          stock_drip: number | null
           created_at: string
           updated_at: string
         }
         Insert: {
           id?: string
           unica?: boolean
+          stock_340?: number | null
+          stock_500?: number | null
+          stock_2500?: number | null
+          stock_drip?: number | null
           precio_lb?: number
           precio_340?: number
           precio_500?: number
@@ -343,10 +364,10 @@ export type Database = {
     Functions: { [_ in never]: never }
     Enums: {
       /** No es un enum de Postgres: es el check de rol_permisos.permiso. */
-      permiso: 'tablero' | 'nuevo_lote' | 'curvas' | 'historial' | 'clientes' | 'configuracion'
+      permiso: 'tablero' | 'nuevo_lote' | 'curvas' | 'historial' | 'clientes' | 'configuracion' | 'reportes' | 'administracion'
       tipo_documento: 'CC' | 'NIT'
       forma_pago: 'Efectivo' | 'Banco' | 'Bold'
-      proceso_cafe: 'Pergamino' | 'Natural' | 'Honey' | 'Cofermentado'
+      proceso_cafe: 'Pergamino' | 'Natural' | 'Honey' | 'Cofermentado' | 'En almendra (en verde)'
       estado_envio: 'Pendiente' | 'Enviando' | 'Enviado' | 'Error'
       etapa_lote: 'Recibido' | 'Trillado' | 'Tostado' | 'Empacado' | 'Entregado'
       llegada_cafe: 'Pergamino' | 'Verde'

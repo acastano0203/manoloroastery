@@ -23,12 +23,12 @@ export function ResumenCobroBar({ f }: { f: RegistroFormApi }) {
     <div role="status" className="rounded-lg bg-red-100 px-3 py-1.5 text-center text-[15px] font-semibold text-red-800">{formMsg}</div>
   )
 
-  // Antes de tostar no hay cobro: sale del peso en almendra y de las bolsas, que se anotan después.
+  // Antes de tostar no hay cobro: se estima con el peso en almendra, que se anota al tostar.
   if (!f.conCobro) {
     return (
       <div className="sticky bottom-0 z-10 border-t border-verde-salvia bg-white shadow-[0_-6px_20px_rgba(18,38,32,0.06)]">
         <div className="mx-auto flex max-w-[720px] flex-col gap-2.5 px-4 pb-4 pt-3 lg:flex-row lg:items-center lg:gap-6 lg:py-4">
-          <p className="m-0 flex-1 text-[15px] text-pizarra-suave">El cobro se calcula al tostar (peso en almendra) y al empacar (bolsas y drips).</p>
+          <p className="m-0 flex-1 text-[15px] text-pizarra-suave">El cobro se estima al tostar con el peso en almendra y queda con el peso tostado al empacar, más las bolsas y drips.</p>
           <div className="flex flex-col gap-2 lg:min-w-[300px]">
             <div className="flex gap-2">{botones}</div>
             {mensaje}

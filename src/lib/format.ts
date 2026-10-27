@@ -19,6 +19,12 @@ export const fecha = (iso: string, larga = false) => {
   return Number(d) + ' ' + MESES[Number(m) - 1] + (larga ? ' ' + y : '')
 }
 
+/** "2026-10-28T15:40:00Z" → "28 oct · 3:40 p. m." (hora local). */
+export const fechaHora = (iso: string) => {
+  const d = new Date(iso)
+  return `${d.getDate()} ${MESES[d.getMonth()]} · ${d.toLocaleTimeString('es-CO', { hour: 'numeric', minute: '2-digit' })}`
+}
+
 export const hoyISO = (offset = 0) => {
   const d = new Date()
   d.setDate(d.getDate() + offset)
@@ -38,6 +44,14 @@ export const parseKg = (v: string) => {
   if (s === '') return null
   const n = Number(s)
   return isNaN(n) ? NaN : n
+}
+
+/** Gramos → kilos para mostrar o escribir en un campo: 16000 → "16", 4235 → "4,235". */
+export const kgDeG = (g: number) => kg(Math.round(g) / 1000)
+/** Kilos escritos ("4,2") → gramos (4200), para calcular y guardar. Vacío → null, inválido → NaN. */
+export const parseKgAG = (v: string) => {
+  const k = parseKg(v)
+  return k === null || isNaN(k) ? k : Math.round(k * 1000)
 }
 
 /** Minúsculas y sin tildes, para buscar. */

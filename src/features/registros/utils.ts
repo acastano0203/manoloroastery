@@ -1,4 +1,4 @@
-import { dec, miles, money } from '../../lib/format'
+import { dec, kgDeG, money } from '../../lib/format'
 import type { Precios } from '../configuracion/types'
 import { pasaPorTrilla } from './etapas'
 import { UNIDADES, type CantidadBolsas, type Cobro, type Proceso, type Registro, type Unidad } from './types'
@@ -11,24 +11,29 @@ export const BOLSAS = [
   { n: 'nDrip', p: 'pDrip', label: 'drip', nombre: 'Drip', plural: 'Drips', bolsa: false },
 ] as const
 
-/** Cobro: gramos ÷ 500 = libras × precio por libra, más bolsas y drips. */
-export function calcularCobro(r: CantidadBolsas & { gramos: number | null }, precios: Precios): Cobro {
-  const g = r.gramos && r.gramos > 0 ? r.gramos : 0
+/**
+ * Cobro: gramos ÷ 500 = libras × precio por libra, más bolsas y drips. Se muestra en kilos (1 kg = 2 lb).
+ * Los gramos son los del café tostado, que se pesa al empacar. Antes de empacar se estima con el café en almendra.
+ */
+export function calcularCobro(r: CantidadBolsas & { gramos: number | null; gramosTostado?: number | null }, precios: Precios): Cobro {
+  const base = r.gramosTostado && r.gramosTostado > 0 ? 'tostado' : 'almendra'
+  const gBase = base === 'tostado' ? r.gramosTostado : r.gramos
+  const g = gBase && gBase > 0 ? gBase : 0
   const libras = g / 500
   const tostion = libras * precios.lb
   const nb = BOLSAS.reduce((s, b) => s + r[b.n], 0)
   const bolsas = BOLSAS.reduce((s, b) => s + r[b.n] * precios[b.p], 0)
   const total = tostion + bolsas
   return {
-    libras, tostion, bolsas, total, nb,
+    libras, tostion, bolsas, total, nb, base,
     librasTxt: dec(libras, 2) + ' lb',
     tostionTxt: money(tostion),
     bolsasTxt: money(bolsas),
     totalTxt: money(total),
-    fLibras: dec(g, 0) + ' g ÷ 500',
+    fLibras: `${kgDeG(g)} kg ${base === 'tostado' ? 'tostado' : 'en almendra'} × 2`,
     fTostion: dec(libras, 2) + ' lb × ' + money(precios.lb),
     fBolsas: nb + (nb === 1 ? ' unidad' : ' unidades'),
-    fTotal: `${dec(g, 0)} g ÷ 500 = ${dec(libras, 2)} lb × ${money(precios.lb)} + bolsas y drips ${money(bolsas)}`,
+    fTotal: `${kgDeG(g)} kg ${base === 'tostado' ? 'tostado' : 'en almendra'} × 2 = ${dec(libras, 2)} lb × ${money(precios.lb)} + bolsas y drips ${money(bolsas)}`,
   }
 }
 
@@ -75,14 +80,14 @@ const porcentaje = (v: number | null) => (v === null ? '' : v.toFixed(1).replace
 export function registroACsv(r: Registro): string {
   const c = calcularCobro(r, r.precios)
   const filas = [
-    ['Registro', 'Fecha', 'Cliente', 'Celular', 'Proceso', 'Kilos recibidos', 'Gramos tostados', 'Libras', 'Tostión',
-      'Sin bolsa', 'Bolsas 340g', 'Bolsas 500g', 'Bolsas 2500g', 'Drips', 'Valor empaque', 'Gramos tostado',
-      'Merma %', 'Pérdida en el tueste %', 'Almacenamiento', 'Días almacenado', 'Cantidad almacenada', 'Gramos almacenados', 'Cómo va marcado',
+    ['Registro', 'Fecha', 'Cliente', 'Celular', 'Proceso', 'Kilos recibidos', 'Kilos en almendra', 'Libras', 'Tostión',
+      'Sin bolsa', 'Bolsas 340g', 'Bolsas 500g', 'Bolsas 2500g', 'Drips', 'Valor empaque', 'Kilos tostado',
+      'Merma %', 'Pérdida en el tueste %', 'Almacenamiento', 'Días almacenado', 'Kilos almacenados', 'Cómo va marcado',
       'Total', 'Forma de pago', 'Estado'],
-    [r.codigo, r.fecha, r.cliente, r.celular, r.proceso, r.kilos, r.gramos ?? '', c.libras.toFixed(2), Math.round(c.tostion),
-      r.bolsasCliente ? 'Sí' : 'No', r.n340, r.n500, r.n2500, r.nDrip, Math.round(c.bolsas), r.gramosTostado ?? '',
+    [r.codigo, r.fecha, r.cliente, r.celular, r.proceso, r.kilos, r.gramos === null ? '' : kgDeG(r.gramos), c.libras.toFixed(2), Math.round(c.tostion),
+      r.bolsasCliente ? 'Sí' : 'No', r.n340, r.n500, r.n2500, r.nDrip, Math.round(c.bolsas), r.gramosTostado === null ? '' : kgDeG(r.gramosTostado),
       porcentaje(calcularMerma(r)), porcentaje(calcularPerdidaTueste(r)),
-      r.almacenamiento ? 'Sí' : 'No', r.almacenamiento?.dias ?? '', r.almacenamiento ? cantidadTxt(r.almacenamiento.gramos, r.almacenamiento.unidad) : '', r.almacenamiento?.gramos ?? '', r.almacenamiento?.marcado ?? '',
+      r.almacenamiento ? 'Sí' : 'No', r.almacenamiento?.dias ?? '', r.almacenamiento ? kgDeG(r.almacenamiento.gramos) : '', r.almacenamiento?.marcado ?? '',
       Math.round(c.total), r.pago, r.estado],
   ]
   return '﻿' + filas.map((f) => f.map((v) => `"${String(v ?? '').replace(/"/g, '""')}"`).join(';')).join('\n')
@@ -95,12 +100,6 @@ export const aGramos = (valor: number, u: Unidad) => Math.round(valor * gramosPo
 
 /** Gramos → cantidad en esa unidad, con hasta 2 decimales. */
 export const desdeGramos = (gramos: number, u: Unidad) => Math.round((gramos / gramosPor(u)) * 100) / 100
-
-/** "3 kg", "6 lb", "3.000 g" (coma decimal). */
-export function cantidadTxt(gramos: number, u: Unidad) {
-  const v = desdeGramos(gramos, u)
-  return `${u === 'g' ? miles(v) : String(v).replace('.', ',')} ${u}`
-}
 
 /** Fecha límite del almacenamiento (YYYY-MM-DD): el día de la entrega más los días acordados. */
 export function almacenHasta(r: Pick<Registro, 'entregadoAt' | 'almacenamiento'>): string | null {

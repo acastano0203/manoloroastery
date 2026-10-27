@@ -33,7 +33,8 @@ export interface Tostion {
   llamaInicial: number | null
   /** Cuándo arrancó el cronómetro. */
   iniciadaAt: string | null
-  /** Segundos desde la carga. */
+  /** Segundos desde la carga. Fin de secado: cuando el grano se pone amarillo. */
+  secadoSeg: number | null
   crackSeg: number | null
   descargaSeg: number | null
   notas: string | null
@@ -44,4 +45,4 @@ export interface Tostion {
 }
 
 export type CambiosTostion = Partial<Pick<Tostion,
-  'gramosVerde' | 'tempCarga' | 'aireInicial' | 'llamaInicial' | 'iniciadaAt' | 'crackSeg' | 'descargaSeg' | 'notas'>>
+  'gramosVerde' | 'tempCarga' | 'aireInicial' | 'llamaInicial' | 'iniciadaAt' | 'secadoSeg' | 'crackSeg' | 'descargaSeg' | 'notas'>>

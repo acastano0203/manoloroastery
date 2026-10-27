@@ -2,16 +2,18 @@ import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from 
 import { Button } from '../../../components/ui/Button'
 import type { ButtonSize } from '../../../components/ui/buttonClass'
 import { Icon } from '../../../components/ui/Icon'
-import { dec, kg, miles, parseG } from '../../../lib/format'
+import { kg, kgDeG, parseG, parseKgAG } from '../../../lib/format'
 import { usePermisos } from '../../admin/hooks/usePermisos'
 import { PASO, siguienteEtapa } from '../etapas'
-import { validarGramos, validarTostado } from '../formulario'
+import { validarGramos, validarSobrante, validarTostado } from '../formulario'
 import { useRegistros } from '../hooks/useRegistros'
 import type { DatosPaso } from '../services/registrosService'
 import type { Etapa, Registro } from '../types'
 import { aGramos, calcularCobro } from '../utils'
 import { AlmacenamientoCampos, leerCantidad, textoCantidad, validarAlmacen, type AlmacenBorrador } from './form/AlmacenamientoCampos'
 import { EmpaqueCampos, type EmpaqueBorrador } from './form/BolsasSelector'
+import { DescripcionCampo } from './form/DescripcionCampo'
+import { PresentacionCampos, validarPresentacion, type PresentacionBorrador } from './form/PresentacionCampos'
 import { GramosInput } from './form/GramosInput'
 import { Merma } from './form/Merma'
 
@@ -78,18 +80,26 @@ export function PasoDialog({ r, etapa, moviendo, onCerrar, onConfirmar }: Dialog
   const caja = useRef<HTMLFormElement>(null)
   const esTostar = etapa === 'Tostado'
   const esEntregar = etapa === 'Entregado'
-  const [gramos, setGramos] = useState(r.gramos ? miles(r.gramos) : '')
+  const [gramos, setGramos] = useState(r.gramos ? kgDeG(r.gramos) : '')
   const [intentado, setIntentado] = useState(false)
   const [empaque, setEmpaque] = useState<EmpaqueBorrador>({
     n340: r.n340, n500: r.n500, n2500: r.n2500, nDrip: r.nDrip, bolsasCliente: r.bolsasCliente,
-    gramosTostado: r.gramosTostado ? miles(r.gramosTostado) : '',
+    gramosTostado: r.gramosTostado ? kgDeG(r.gramosTostado) : '',
+    gramosSobrante: r.gramosSobrante === null ? '' : String(r.gramosSobrante),
   })
   const [almacen, setAlmacen] = useState<AlmacenBorrador>({
     requiere: r.almacenamiento ? true : null, dias: r.almacenamiento?.dias ?? 1,
-    unidad: r.almacenamiento?.unidad ?? 'g',
-    cantidad: r.almacenamiento ? textoCantidad(r.almacenamiento.gramos, r.almacenamiento.unidad) : r.gramosTostado ? miles(r.gramosTostado) : '',
+    unidad: 'kg',
+    cantidad: r.almacenamiento ? textoCantidad(r.almacenamiento.gramos, 'kg') : r.gramosTostado ? kgDeG(r.gramosTostado) : '',
     marcado: r.almacenamiento?.marcado ?? '', foto: null,
   })
+
+  const [presentacion, setPresentacion] = useState<PresentacionBorrador>({ presentacion: r.presentacion, molienda: r.molienda })
+  const [descripcion, setDescripcion] = useState(r.descripciones[etapa] ?? '')
+  // Solo se manda si se escribió algo distinto de lo que ya había.
+  const conDescripcion = descripcion.trim() !== (r.descripciones[etapa] ?? '')
+    ? { descripciones: { ...r.descripciones, [etapa]: descripcion } }
+    : {}
 
   useEffect(() => {
     const alTeclear = (e: KeyboardEvent) => { if (e.key === 'Escape') onCerrar() }
@@ -99,16 +109,21 @@ export function PasoDialog({ r, etapa, moviendo, onCerrar, onConfirmar }: Dialog
     return () => document.removeEventListener('keydown', alTeclear)
   }, [onCerrar])
 
-  const g = parseG(gramos)
+  const tg = parseKgAG(empaque.gramosTostado)
+  // Mientras no se escriba el peso tostado, el cobro se estima con la almendra.
+  const tostadoValido = tg !== null && !isNaN(tg) && tg > 0 ? tg : null
+  const g = parseKgAG(gramos)
   const gValidos = g !== null && !isNaN(g) && g > 0 ? g : 0
   const cobro = esTostar
     ? calcularCobro({ ...r, gramos: gValidos }, r.precios)
-    : calcularCobro({ ...r, ...empaque }, r.precios)
+    : calcularCobro({ ...r, ...empaque, gramosTostado: tostadoValido }, r.precios)
   const aviso = esTostar && gValidos > r.kilos * 1000
-    ? `Es más de lo recibido (${dec(r.kilos * 1000, 0)} g). Revisa las cantidades.`
+    ? `Es más de lo recibido (${kg(r.kilos)} kg). Revisa las cantidades.`
     : null
 
   const errorTostado = etapa === 'Empacado' ? validarTostado(empaque.gramosTostado, r.gramos, true) : undefined
+  const errorSobrante = etapa === 'Empacado' ? validarSobrante(empaque.gramosSobrante, empaque.gramosTostado) : undefined
+  const errorPresentacion = etapa === 'Empacado' ? validarPresentacion(presentacion) : undefined
   const erroresAlmacen = esEntregar ? validarAlmacen(almacen, r.gramosTostado) : {}
 
   function confirmar(e: FormEvent) {
@@ -120,15 +135,19 @@ export function PasoDialog({ r, etapa, moviendo, onCerrar, onConfirmar }: Dialog
           ? { dias: almacen.dias, gramos: aGramos(leerCantidad(almacen.cantidad, almacen.unidad)!, almacen.unidad), unidad: almacen.unidad,
             marcado: almacen.marcado, foto: almacen.foto! }
           : null,
+        ...conDescripcion,
       })
     }
     if (!esTostar) {
-      if (errorTostado) return setIntentado(true)
-      const { gramosTostado: _texto, ...cantidades } = empaque
-      return onConfirmar({ ...cantidades, gramosTostado: parseG(empaque.gramosTostado)! })
+      if (errorTostado || errorSobrante || errorPresentacion) return setIntentado(true)
+      const { gramosTostado: _texto, gramosSobrante: _sobrante, ...cantidades } = empaque
+      return onConfirmar({
+        ...cantidades, gramosTostado: parseKgAG(empaque.gramosTostado)!, gramosSobrante: parseG(empaque.gramosSobrante),
+        presentacion: presentacion.presentacion!, molienda: presentacion.molienda, ...conDescripcion,
+      })
     }
     if (validarGramos(gramos)) return setIntentado(true)
-    onConfirmar({ gramos: gValidos })
+    onConfirmar({ gramos: gValidos, ...conDescripcion })
   }
 
   return (
@@ -154,9 +173,15 @@ export function PasoDialog({ r, etapa, moviendo, onCerrar, onConfirmar }: Dialog
             <Merma r={{ ...r, gramos: gValidos || null }} />
           </GramosInput>
         ) : (
+          <>
+          <PresentacionCampos valores={presentacion} cambiar={setPresentacion} error={intentado && errorPresentacion} />
           <EmpaqueCampos idTostado={idTostado} valores={empaque} cambiar={(p) => setEmpaque((v) => ({ ...v, ...p }))} autoFocus
-            precios={r.precios} gramosAlmendra={r.gramos} errorTostado={intentado && errorTostado} />
+            precios={r.precios} gramosAlmendra={r.gramos} errorTostado={intentado && errorTostado}
+            errorSobrante={intentado && errorSobrante} />
+          </>
         )}
+
+        <DescripcionCampo etapa={etapa} value={descripcion} onChange={setDescripcion} opcional />
 
         <div className="flex flex-col gap-0.5 rounded-xl bg-rocio-claro px-4 py-3">
           <span className="flex items-baseline justify-between gap-3">

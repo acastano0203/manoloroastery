@@ -8,10 +8,15 @@ describe('Validación del lote', () => {
     expect(validarRegistro(recibido)).toEqual({})
   })
 
+  it('el nombre del lote es opcional (vacío queda el consecutivo), de hasta 40 letras', () => {
+    expect(validarRegistro({ ...recibido, codigo: 'Lote El Mirador' }).codigo).toBeUndefined()
+    expect(validarRegistro({ ...recibido, codigo: 'x'.repeat(41) }).codigo).toBe('Máximo 40 letras.')
+  })
+
   it('si el lote ya se tostó, el peso en almendra es obligatorio', () => {
     expect(validarRegistro(recibido, true).gramos).toBe('Escribe el peso en almendra.')
-    expect(validarRegistro({ ...recibido, gramos: '0' }, true).gramos).toBe('Solo números mayores que 0.')
-    expect(validarRegistro({ ...recibido, gramos: '3.500' }, true)).toEqual({})
+    expect(validarRegistro({ ...recibido, gramos: '0' }, true).gramos).toBe('Solo números mayores que 0. Ej: 16,5')
+    expect(validarRegistro({ ...recibido, gramos: '3,5' }, true)).toEqual({})
   })
 
   it('la humedad es opcional, pero si se escribe debe ser un porcentaje', () => {

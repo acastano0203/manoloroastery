@@ -31,15 +31,15 @@ interface ConPermisoProps {
   p?: Permiso
   /** Necesita ver lotes por algún lado. */
   lotes?: boolean
-  /** Solo administradores. */
+  /** Solo quien puede usar Administración. */
   admin?: boolean
   children: ReactNode
 }
 
 /** Muestra la página solo si el rol puede verla. */
 export function ConPermiso({ p, lotes, admin, children }: ConPermisoProps) {
-  const { puede, veLotes, esAdmin } = usePermisos()
-  const ok = admin ? esAdmin : lotes ? veLotes : p ? puede(p) : false
+  const { puede, veLotes } = usePermisos()
+  const ok = admin ? puede('administracion') : lotes ? veLotes : p ? puede(p) : false
   if (ok) return <>{children}</>
   return (
     <main className="mx-auto w-full max-w-[720px] p-6">
@@ -50,10 +50,11 @@ export function ConPermiso({ p, lotes, admin, children }: ConPermisoProps) {
 
 /** En "/": si el rol no ve lotes, lo lleva a la primera pantalla que sí puede ver. */
 export function InicioSegunRol({ children }: { children: ReactNode }) {
-  const { veLotes, puede, esAdmin } = usePermisos()
+  const { veLotes, puede } = usePermisos()
   if (veLotes) return <>{children}</>
+  if (puede('reportes')) return <Navigate to="/reportes" replace />
   if (puede('clientes')) return <Navigate to="/clientes" replace />
   if (puede('configuracion')) return <Navigate to="/configuracion" replace />
-  if (esAdmin) return <Navigate to="/administracion" replace />
+  if (puede('administracion')) return <Navigate to="/administracion" replace />
   return <ConPermiso lotes>{children}</ConPermiso>
 }

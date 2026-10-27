@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Card } from '../../../../components/ui/Card'
 import { enlaceArchivo } from '../../../../lib/archivos'
-import { fecha, hoyISO, miles } from '../../../../lib/format'
+import { fecha, hoyISO, kgDeG } from '../../../../lib/format'
 import type { Registro } from '../../types'
-import { almacenHasta, cantidadTxt } from '../../utils'
+import { almacenHasta } from '../../utils'
 
 /** Café que quedó almacenado al entregar: días, hasta cuándo, cantidad, cómo va marcado y la foto. */
 export function AlmacenamientoDetalle({ r }: { r: Registro }) {
@@ -36,7 +36,7 @@ export function AlmacenamientoDetalle({ r }: { r: Registro }) {
           </div>
           <div>
             <dt className="text-sm text-pizarra-suave">Cantidad</dt>
-            <dd className="m-0 font-semibold">{cantidadTxt(a.gramos, a.unidad)}{a.unidad !== 'g' && <span className="font-normal text-pizarra-suave"> ({miles(a.gramos)} g)</span>}</dd>
+            <dd className="m-0 font-semibold">{kgDeG(a.gramos)} kg</dd>
           </div>
           <div className="col-span-2">
             <dt className="text-sm text-pizarra-suave">Cómo va marcado</dt>

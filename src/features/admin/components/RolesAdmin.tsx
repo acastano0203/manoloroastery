@@ -1,12 +1,13 @@
-import { useId, useState, type FormEvent } from 'react'
+import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import { Button } from '../../../components/ui/Button'
 import { Icon } from '../../../components/ui/Icon'
 import { cx } from '../../../lib/cx'
 import type { AdminApi } from '../hooks/useAdmin'
+import { usePermisos } from '../hooks/usePermisos'
 import { cambiarPermiso, crearRol, eliminarRol, renombrarRol } from '../services/adminService'
-import { PERMISOS, type Rol } from '../types'
+import { MENUS, PERMISOS, type Permiso, type Rol } from '../types'
 
-/** Roles y qué pantallas ve cada uno. */
+/** Roles y qué menús ve cada uno. */
 export function RolesAdmin({ api }: { api: AdminApi }) {
   const id = useId()
   const [nuevo, setNuevo] = useState('')
@@ -70,24 +71,67 @@ function TarjetaRol({ r, usuarios, api }: { r: Rol; usuarios: number; api: Admin
       {r.administrador ? (
         <p className="m-0 text-[15px] text-pizarra">Ve todas las pantallas y administra roles y usuarios. No se puede cambiar ni eliminar.</p>
       ) : (
-        <fieldset className="m-0 grid grid-cols-1 gap-2 border-0 p-0 sm:grid-cols-2">
-          <legend className="mb-2 p-0 text-[15px] font-semibold">Qué puede ver</legend>
-          {PERMISOS.map(({ p, nombre: n, detalle }) => {
-            const on = r.permisos.includes(p)
+        <fieldset className="m-0 flex flex-col gap-2 border-0 p-0">
+          <legend className="mb-2 p-0 text-[15px] font-semibold">Qué menús ve</legend>
+          {MENUS.map((m) => <Menu key={m.menu} m={m} r={r} api={api} />)}
+        </fieldset>
+      )}
+    </section>
+  )
+}
+
+/** Cambia varios permisos del rol a la vez (los que hagan falta). */
+const cambiarVarios = (rolId: string, permisos: readonly Permiso[], activo: boolean) => async () => {
+  for (const p of permisos) await cambiarPermiso(rolId, p, activo)
+}
+
+/**
+ * Un ítem del menú: marcarlo le da al rol todo lo de ese menú y desmarcarlo se lo quita.
+ * Si solo tiene una parte (en Registros), la casilla queda a medias y abajo se ve qué tiene.
+ */
+function Menu({ m, r, api }: { m: (typeof MENUS)[number]; r: Rol; api: AdminApi }) {
+  const { esAdmin } = usePermisos()
+  const caja = useRef<HTMLInputElement>(null)
+  const tiene = m.permisos.filter((p) => r.permisos.includes(p))
+  const on = tiene.length > 0
+  const aMedias = on && tiene.length < m.permisos.length
+  // El permiso de Administración solo lo da o lo quita el Administrador.
+  const bloqueado = m.permisos.includes('administracion') && !esAdmin
+  useEffect(() => { if (caja.current) caja.current.indeterminate = aMedias }, [aMedias])
+  const opciones = m.permisos.length > 1 ? PERMISOS.filter((x) => m.permisos.includes(x.p)) : []
+
+  return (
+    <div className={cx('flex flex-col rounded-xl border-2', on ? 'border-esmeralda bg-esmeralda/10' : 'border-linea-oscuro bg-white')}>
+      <label className={cx('flex min-h-14 items-start gap-3 px-3 py-2.5', bloqueado ? 'cursor-not-allowed opacity-60' : 'cursor-pointer')}>
+        <input ref={caja} type="checkbox" checked={on} disabled={bloqueado} className="mt-0.5 h-5 w-5 shrink-0 accent-esmeralda"
+          onChange={() => void api.ejecutar(on
+            ? cambiarVarios(r.id, tiene, false)
+            : cambiarVarios(r.id, m.permisos, true))} />
+        <span className="flex flex-col">
+          <span className="font-semibold">{m.menu}</span>
+          <span className="text-sm text-pizarra-suave">
+            {m.detalle}{bloqueado && '. Solo el Administrador puede darlo o quitarlo.'}
+          </span>
+        </span>
+      </label>
+      {on && opciones.length > 0 && (
+        <fieldset className="m-0 grid grid-cols-1 gap-1.5 border-0 border-t border-esmeralda/30 px-3 pb-3 pt-2.5 sm:grid-cols-2">
+          <legend className="sr-only">Qué puede hacer en {m.menu}</legend>
+          {opciones.map(({ p, nombre, detalle }) => {
+            const sub = r.permisos.includes(p)
             return (
-              <label key={p} className={cx('flex min-h-14 cursor-pointer items-start gap-3 rounded-xl border-2 px-3 py-2.5',
-                on ? 'border-esmeralda bg-esmeralda/10' : 'border-linea-oscuro bg-white')}>
-                <input type="checkbox" checked={on} className="mt-0.5 h-5 w-5 shrink-0 accent-esmeralda"
+              <label key={p} className="flex cursor-pointer items-start gap-2.5 rounded-lg bg-white px-2.5 py-2">
+                <input type="checkbox" checked={sub} className="mt-0.5 h-5 w-5 shrink-0 accent-esmeralda"
                   onChange={(e) => void api.ejecutar(() => cambiarPermiso(r.id, p, e.target.checked))} />
                 <span className="flex flex-col">
-                  <span className="font-semibold">{n}</span>
-                  <span className="text-sm text-pizarra-suave">{detalle}</span>
+                  <span className="text-[15px] font-semibold">{nombre}</span>
+                  <span className="text-[13px] text-pizarra-suave">{detalle}</span>
                 </span>
               </label>
             )
           })}
         </fieldset>
       )}
-    </section>
+    </div>
   )
 }

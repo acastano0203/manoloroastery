@@ -4,7 +4,7 @@ import { Icon } from '../../../../components/ui/Icon'
 import { OptionGroup } from '../../../../components/ui/OptionGroup'
 import { cx } from '../../../../lib/cx'
 import { miles, parseG, parseKg } from '../../../../lib/format'
-import { ALMACEN_DIAS_MAX, UNIDADES, type Unidad } from '../../types'
+import { ALMACEN_DIAS_MAX, type Unidad } from '../../types'
 import { aGramos, desdeGramos } from '../../utils'
 
 /** Lo que se anota al entregar, tal cual se escribe. */
@@ -12,8 +12,9 @@ export interface AlmacenBorrador {
   /** null: todavía no se respondió si requiere almacenamiento. */
   requiere: boolean | null
   dias: number
-  /** Cantidad como se escribe, en la unidad elegida. */
+  /** Cantidad como se escribe, en kilos. */
   cantidad: string
+  /** Siempre kilos; los almacenamientos viejos pueden estar en gramos o libras. */
   unidad: Unidad
   marcado: string
   foto: File | null
@@ -55,13 +56,6 @@ interface Props {
 export function AlmacenamientoCampos({ valores, cambiar, errores }: Props) {
   const id = useId()
 
-  /** Al cambiar de unidad, el número escrito se convierte (3.000 g → 3 kg → 6 lb). */
-  function cambiarUnidad(u: Unidad) {
-    const v = leerCantidad(valores.cantidad, valores.unidad)
-    const cantidad = v !== null && !isNaN(v) && v > 0 ? textoCantidad(aGramos(v, valores.unidad), u) : valores.cantidad
-    cambiar({ unidad: u, cantidad })
-  }
-
   const [vista, setVista] = useState<string | null>(null)
   useEffect(() => {
     if (!valores.foto) return setVista(null)
@@ -97,23 +91,12 @@ export function AlmacenamientoCampos({ valores, cambiar, errores }: Props) {
 
           <div className="flex flex-col gap-1.5">
             <label htmlFor={`${id}-cantidad`} className="text-[15px] font-semibold">Cantidad a almacenar</label>
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="relative w-40">
-                <input id={`${id}-cantidad`} inputMode={valores.unidad === 'g' ? 'numeric' : 'decimal'} placeholder="0" value={valores.cantidad}
+            <div className="relative w-40">
+                <input id={`${id}-cantidad`} inputMode="decimal" placeholder="0" value={valores.cantidad}
                   aria-invalid={errores.cantidad ? true : undefined} onChange={(e) => cambiar({ cantidad: e.target.value })}
                   className={cx('h-14 w-full rounded-[10px] border bg-white pl-4 pr-10 text-lg font-bold tabular-nums',
                     errores.cantidad ? 'border-2 border-peligro' : 'border-verde-salvia focus:border-esmeralda')} />
-                <span className="pointer-events-none absolute right-4 top-4 text-pizarra-suave">{valores.unidad}</span>
-              </div>
-              <div role="group" aria-label="Unidad" className="flex rounded-xl bg-white p-1 ring-1 ring-verde-salvia">
-                {UNIDADES.map(({ u, nombre }) => (
-                  <button key={u} type="button" aria-pressed={valores.unidad === u} onClick={() => cambiarUnidad(u)}
-                    className={cx('h-12 rounded-lg px-3 text-[15px] font-semibold',
-                      valores.unidad === u ? 'bg-esmeralda text-white' : 'text-pizarra hover:bg-rocio-claro')}>
-                    {nombre}
-                  </button>
-                ))}
-              </div>
+                <span className="pointer-events-none absolute right-4 top-4 text-pizarra-suave">kg</span>
             </div>
             {errores.cantidad && <FieldError>{errores.cantidad}</FieldError>}
           </div>

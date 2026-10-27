@@ -29,15 +29,22 @@ export function ancho(s: string, size: number, bold: boolean) {
 export const rgb = (hex: string) =>
   [1, 3, 5].map((i) => (parseInt(hex.slice(i, i + 2), 16) / 255).toFixed(3)).join(' ')
 
-/** Arma un PDF de una página de W×H puntos con el contenido dado (F1 = Helvetica, F2 = Helvetica-Bold). */
-export function armarPdf(contenido: string, W: number, H: number): Uint8Array<ArrayBuffer> {
+/**
+ * Arma un PDF de W×H puntos con el contenido dado (F1 = Helvetica, F2 = Helvetica-Bold).
+ * Con una lista de contenidos, cada uno es una página.
+ */
+export function armarPdf(contenido: string | string[], W: number, H: number): Uint8Array<ArrayBuffer> {
+  const paginas = Array.isArray(contenido) ? contenido : [contenido]
+  // 1 catálogo, 2 páginas, 3 y 4 fuentes; luego cada página con su contenido.
   const objetos = [
     '<< /Type /Catalog /Pages 2 0 R >>',
-    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
-    `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${W} ${H}] /Resources << /Font << /F1 4 0 R /F2 5 0 R >> >> /Contents 6 0 R >>`,
+    `<< /Type /Pages /Kids [${paginas.map((_, i) => `${5 + i * 2} 0 R`).join(' ')}] /Count ${paginas.length} >>`,
     '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>',
     '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>',
-    `<< /Length ${contenido.length} >>\nstream\n${contenido}\nendstream`,
+    ...paginas.flatMap((c, i) => [
+      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${W} ${H}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${6 + i * 2} 0 R >>`,
+      `<< /Length ${c.length} >>\nstream\n${c}\nendstream`,
+    ]),
   ]
   let out = '%PDF-1.4\n%\xE2\xE3\xCF\xD3\n'
   const offsets: number[] = []

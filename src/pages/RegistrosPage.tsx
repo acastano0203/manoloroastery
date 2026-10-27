@@ -3,6 +3,7 @@ import { buttonClass } from '../components/ui/buttonClass'
 import { Icon } from '../components/ui/Icon'
 import { Loading } from '../components/ui/Loading'
 import { PageHeading } from '../components/ui/PageHeading'
+import { AvisoInventario } from '../features/configuracion/components/AvisoInventario'
 import { AvisoRegistros } from '../features/registros/components/AvisoRegistros'
 import { Historial } from '../features/registros/components/Historial'
 import { HoyResumen } from '../features/registros/components/HoyResumen'
@@ -32,6 +33,7 @@ export function RegistrosPage() {
         <AvisoRegistros />
         {cargando ? <Loading /> : (
           <>
+            {(veTablero || creaLotes) && <AvisoInventario />}
             {veTablero && <HoyResumen />}
             {veTablero && <LotesPorEtapa />}
             {puede('historial') && <Historial />}

@@ -7,7 +7,7 @@ import { mensajeError } from '../../../lib/errores'
 import type { Registro } from '../../registros/types'
 import type { TostionesApi } from '../hooks/useTostiones'
 import { enlaceArchivo } from '../../../lib/archivos'
-import { eliminarTostion, subirCurvaAutomatica } from '../services/tostionesService'
+import { subirCurvaAutomatica } from '../services/tostionesService'
 import type { Tostion } from '../types'
 
 const LIMITE_MB = 10
@@ -146,7 +146,7 @@ function ArchivoCurva({ t, numero, editable, api }: { t: Tostion; numero: number
         <div className="flex flex-wrap items-center gap-2 rounded-[10px] bg-red-50 p-3">
           <span className="flex-1 text-[15px] font-semibold text-red-800">¿Eliminar este PDF? No se puede deshacer.</span>
           <Button variant="outline" size="md" onClick={() => setConfirmando(false)}>No</Button>
-          <Button variant="danger" size="md" onClick={() => void api.ejecutar(() => eliminarTostion(t))}>Sí, eliminar</Button>
+          <Button variant="danger" size="md" onClick={() => void api.eliminar(t)}>Sí, eliminar</Button>
         </div>
       )}
     </li>

@@ -21,12 +21,30 @@ export function leerMmss(texto: string): number | null {
 export const segundosDesde = (iniciadaAt: string, ahora = Date.now()) =>
   Math.max(0, Math.floor((ahora - new Date(iniciadaAt).getTime()) / 1000))
 
-/** Tiempo de desarrollo (del primer crack a la descarga), total y DTR (% del tiempo total en desarrollo). */
-export function resumenTiempos(t: Pick<Tostion, 'crackSeg' | 'descargaSeg'>) {
+export interface Fase {
+  /** Duración de la fase, en segundos. */
+  seg: number | null
+  /** % del tiempo total de la curva. */
+  pct: number | null
+}
+
+/**
+ * Las tres fases de la tostión, cada una como % del tiempo total (del inicio al fin de la curva):
+ * secado (inicio → fin de secado), Maillard (fin de secado → 1er crack) y desarrollo (1er crack → fin de curva).
+ * Las tres suman 100 %. Una fase sin sus dos marcas queda vacía.
+ */
+export function fasesTostion(t: Pick<Tostion, 'secadoSeg' | 'crackSeg' | 'descargaSeg'>) {
   const total = t.descargaSeg
-  const desarrollo = t.crackSeg !== null && t.descargaSeg !== null ? t.descargaSeg - t.crackSeg : null
-  const dtr = desarrollo !== null && total ? (desarrollo / total) * 100 : null
-  return { total, desarrollo, dtr }
+  const fase = (desde: number | null, hasta: number | null): Fase => {
+    const seg = desde !== null && hasta !== null ? hasta - desde : null
+    return { seg, pct: seg !== null && total ? (seg / total) * 100 : null }
+  }
+  return {
+    total,
+    secado: fase(t.secadoSeg === null ? null : 0, t.secadoSeg),
+    maillard: fase(t.secadoSeg, t.crackSeg),
+    desarrollo: fase(t.crackSeg, t.descargaSeg),
+  }
 }
 
 /**

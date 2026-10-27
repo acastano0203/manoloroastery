@@ -14,6 +14,7 @@ export function useEncabezado(): { titulo: string; volverA: string | null } {
   const detalle = matchPath('/registros/:id', pathname)
   if (detalle) return { titulo: `Lote ${codigo(detalle.params.id)}`, volverA: '/' }
   if (pathname === '/nuevo') return { titulo: 'Nuevo lote', volverA: '/' }
+  if (pathname.startsWith('/reportes')) return { titulo: 'Reportes', volverA: null }
   if (pathname.startsWith('/clientes')) return { titulo: 'Clientes', volverA: null }
   if (pathname.startsWith('/configuracion')) return { titulo: 'Configuración', volverA: null }
   return { titulo: 'Registros', volverA: null }

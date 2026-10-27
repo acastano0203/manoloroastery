@@ -6,7 +6,7 @@ import { useCallback, useMemo, useState, type ReactNode } from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import { cx } from '../../../lib/cx'
 import { fecha, kg } from '../../../lib/format'
-import { ETAPAS, movimientoA } from '../etapas'
+import { ETAPAS, movimientoA, ordenDeLlegada } from '../etapas'
 import { useRegistros } from '../hooks/useRegistros'
 import type { DatosPaso } from '../services/registrosService'
 import type { Etapa, Registro } from '../types'
@@ -40,8 +40,8 @@ export function LotesPorEtapa() {
 
   const grupos = useMemo(() => {
     const m = new Map<Etapa, Registro[]>(ETAPAS.map((e) => [e, []]))
-    // Los más antiguos primero: son los que llevan más tiempo esperando.
-    for (const r of [...registros].reverse()) {
+    // Por la hora en que llegó a su etapa (empates: el más viejo primero). El primero es el que está en turno.
+    for (const r of ordenDeLlegada([...registros].reverse())) {
       if (r.etapa === 'Entregado' && r.estado === 'Enviado') continue
       m.get(r.etapa)?.push(r)
     }
@@ -90,7 +90,7 @@ export function LotesPorEtapa() {
               <Columna key={col.etapa} etapa={col.etapa} titulo={col.titulo} texto={col.texto} numero={i + 1}
                 total={lista.length} flecha={i < COLUMNAS.length - 1}
                 destino={arrastrado && arrastrado.etapa !== col.etapa ? movimientoA(arrastrado, col.etapa) !== null : null}>
-                {lista.map((r) => <LoteTarjeta key={r.id} r={r} />)}
+                {lista.map((r, j) => <LoteTarjeta key={r.id} r={r} turno={j + 1} />)}
               </Columna>
             )
           })}

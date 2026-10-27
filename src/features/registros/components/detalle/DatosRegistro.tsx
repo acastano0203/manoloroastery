@@ -1,6 +1,5 @@
 import { Card } from '../../../../components/ui/Card'
-import { cel, dec, kg } from '../../../../lib/format'
-import { yaEsta } from '../../etapas'
+import { cel, dec, kg, kgDeG, miles } from '../../../../lib/format'
 import type { Registro } from '../../types'
 import { cx } from '../../../../lib/cx'
 import { calcularMerma, calcularPerdidaTueste, capaTrilla, describirBolsas, mermaAlta, mermaMaxima } from '../../utils'
@@ -40,14 +39,16 @@ export function DatosRegistro({ r }: { r: Registro }) {
           <Dato label="Kilos recibidos" valor={`${kg(r.kilos)} kg`} />
           {r.humedad !== null && <Dato label="Humedad" valor={`${kg(r.humedad)} %`} />}
           {r.densidad !== null && <Dato label="Densidad del grano" valor={`${kg(r.densidad)} g/L`} />}
-          {r.gramos !== null && <Dato label="Peso en almendra (café a tostar)" valor={`${dec(r.gramos, 0)} g`} />}
+          {r.gramos !== null && <Dato label="Peso en almendra (café a tostar)" valor={`${kgDeG(r.gramos)} kg`} />}
           {merma !== null && (
             <Dato label={`Merma (sin ${capaTrilla(r.proceso)})`} valor={`${dec(merma, 1)} %`}
               alerta={mermaAlta(merma, r.proceso) ? `Supera el ${mermaMaxima(r.proceso)} %. Coméntaselo al productor.` : undefined} />
           )}
-          {r.gramosTostado !== null && <Dato label="Peso del café tostado" valor={`${dec(r.gramosTostado, 0)} g`} />}
+          {r.gramosTostado !== null && <Dato label="Peso del café tostado" valor={`${kgDeG(r.gramosTostado)} kg`} />}
           {perdida !== null && <Dato label="Pérdida en el tueste" valor={`${dec(perdida, 1)} %`} />}
-          {yaEsta(r, 'Empacado') && <Dato label="Bolsas y drips" valor={describirBolsas(r)} />}
+          {r.presentacion && <Dato label="Presentación" valor={r.presentacion === 'Molido' ? `Molido${r.molienda ? ` · ${r.molienda}` : ''}` : 'En grano'} />}
+          {r.gramosSobrante ? <Dato label="Sobrante sin empacar (se entrega suelto)" valor={`${miles(r.gramosSobrante)} g`} /> : null}
+          <Dato label="Bolsas y drips" valor={describirBolsas(r)} />
           <Dato label="Forma de pago" valor={r.pago ?? 'Sin dato'} />
         </dl>
       </Card>

@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useId, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Button } from '../../../components/ui/Button'
 import { FieldError } from '../../../components/ui/FieldError'
 import { Icon } from '../../../components/ui/Icon'
@@ -7,9 +7,9 @@ import { dec, kg, miles, parseG, parseKg } from '../../../lib/format'
 import type { Registro } from '../../registros/types'
 import type { TostionesApi } from '../hooks/useTostiones'
 import { construirReporteTostion } from '../services/reportePdf'
-import { actualizarTostion, borrarLectura, eliminarTostion, guardarLectura } from '../services/tostionesService'
+import { actualizarTostion, borrarLectura, guardarLectura } from '../services/tostionesService'
 import { AIRES, LLAMAS, MINUTO_MAXIMO, MINUTOS_NORMALES, type Lectura, type Tostion } from '../types'
-import { lecturasCompletas, leerMmss, minutoFinal, mmss, resumenTiempos, segundosDesde } from '../utils'
+import { fasesTostion, lecturasCompletas, leerMmss, minutoFinal, mmss, segundosDesde, type Fase } from '../utils'
 import { CurvaGrafica } from './CurvaGrafica'
 
 interface Props {
@@ -24,7 +24,6 @@ interface Props {
 /** Curva manual de una tostión: arranque, cronómetro, lecturas minuto a minuto, gráfica y reporte en PDF. */
 export function TostionManual({ r, t, numero, editable, api }: Props) {
   const completas = useMemo(() => lecturasCompletas(t), [t])
-  const { desarrollo, dtr } = resumenTiempos(t)
 
   function descargarPdf() {
     const url = URL.createObjectURL(new Blob([construirReporteTostion({ r, t, numero })], { type: 'application/pdf' }))
@@ -41,7 +40,7 @@ export function TostionManual({ r, t, numero, editable, api }: Props) {
       {editable && <Cronometro t={t} api={api} />}
       {editable && <Captura t={t} completas={completas} api={api} />}
 
-      <Resumen t={t} desarrollo={desarrollo} dtr={dtr} />
+      <Resumen t={t} />
       {completas.length > 0 && <CurvaGrafica t={t} lecturas={completas} minutos={minutoFinal(t, MINUTOS_NORMALES)} />}
       <TablaLecturas lecturas={completas} editable={editable} api={api} />
 
@@ -83,7 +82,7 @@ function Arranque({ t, api }: { t: Tostion; api: TostionesApi }) {
   )
 }
 
-/** Cronómetro desde la carga, con los botones de primer crack y descarga. */
+/** Cronómetro desde la carga, con los botones de fin de secado, primer crack y finalizar curva. */
 function Cronometro({ t, api }: { t: Tostion; api: TostionesApi }) {
   const [ahora, setAhora] = useState(Date.now())
   const corriendo = Boolean(t.iniciadaAt) && t.descargaSeg === null
@@ -95,8 +94,10 @@ function Cronometro({ t, api }: { t: Tostion; api: TostionesApi }) {
 
   const transcurrido = t.iniciadaAt ? Math.min(MINUTO_MAXIMO * 60, t.descargaSeg ?? segundosDesde(t.iniciadaAt, ahora)) : 0
   const pasado = transcurrido > MINUTOS_NORMALES * 60
-  const marcar = (c: { crackSeg?: number | null; descargaSeg?: number | null }) =>
-    void api.ejecutar(() => actualizarTostion(t.id, { crackSeg: t.crackSeg, descargaSeg: t.descargaSeg, ...c }))
+  // Segundo cronómetro: arranca al pulsar el 1er crack (tiempo de desarrollo).
+  const desdeCrack = t.crackSeg === null ? null : Math.max(0, transcurrido - t.crackSeg)
+  const marcar = (c: { secadoSeg?: number | null; crackSeg?: number | null; descargaSeg?: number | null }) =>
+    void api.ejecutar(() => actualizarTostion(t.id, { secadoSeg: t.secadoSeg, crackSeg: t.crackSeg, descargaSeg: t.descargaSeg, ...c }))
 
   return (
     <div className="flex flex-col gap-3 rounded-[14px] bg-verde-botella p-4 text-white sm:p-5">
@@ -106,25 +107,38 @@ function Cronometro({ t, api }: { t: Tostion; api: TostionesApi }) {
           <span className="font-display text-5xl font-bold tabular-nums" aria-live="off">{mmss(transcurrido)}</span>
           {pasado && <span className="text-sm text-verde-menta">Pasó de {MINUTOS_NORMALES} minutos</span>}
         </div>
+        {desdeCrack !== null && (
+          <div className="flex flex-col">
+            <span className="text-sm font-semibold text-verde-menta">Desde el 1er crack</span>
+            <span className="font-display text-5xl font-bold tabular-nums" aria-live="off">{mmss(desdeCrack)}</span>
+            {transcurrido > 0 && <span className="text-sm text-verde-menta">DTR {dec((desdeCrack / transcurrido) * 100, 1)} %</span>}
+          </div>
+        )}
         {!t.iniciadaAt ? (
-          <Button size="xl" onClick={() => void api.ejecutar(() => actualizarTostion(t.id, { iniciadaAt: new Date().toISOString() }))}
-            className="bg-white font-bold text-verde-botella hover:bg-verde-menta">
+          <Button variant="claro" size="xl" onClick={() => void api.ejecutar(() => actualizarTostion(t.id, { iniciadaAt: new Date().toISOString() }))}>
             <Icon name="adelante" size={22} />
             Cargar café e iniciar
           </Button>
         ) : corriendo && (
-          <div className="grid grid-cols-2 gap-2">
-            <Button size="xl" disabled={t.crackSeg !== null} onClick={() => marcar({ crackSeg: transcurrido })}
-              className="bg-white font-bold text-verde-botella hover:bg-verde-menta">1er crack</Button>
-            <Button size="xl" onClick={() => marcar({ descargaSeg: transcurrido })}
-              className="bg-amber-400 font-bold text-bosque hover:bg-amber-300">Descarga</Button>
+          <div className="grid w-full grid-cols-3 gap-2 sm:w-auto">
+            <Button variant="claro" size="xl" disabled={t.secadoSeg !== null || t.crackSeg !== null}
+              onClick={() => marcar({ secadoSeg: transcurrido })}>Fin de secado</Button>
+            <Button variant="claro" size="xl" disabled={t.crackSeg !== null} onClick={() => marcar({ crackSeg: transcurrido })}>1er crack</Button>
+            <Button variant="aviso" size="xl" onClick={() => marcar({ descargaSeg: transcurrido })}>Finalizar curva</Button>
           </div>
         )}
       </div>
+      {corriendo && t.secadoSeg === null && t.crackSeg === null && (
+        <p className="m-0 text-sm text-verde-menta">Pulsa «Fin de secado» cuando el grano se ponga amarillo.</p>
+      )}
+      {corriendo && t.secadoSeg !== null && t.crackSeg === null && (
+        <p className="m-0 text-sm text-verde-menta">El 1er crack suele darse con el grano cerca de 190 °C. Al pulsarlo arranca el tiempo desde el crack.</p>
+      )}
       {t.iniciadaAt && (
         <div className="flex flex-wrap gap-3 text-bosque">
+          <Momento label="Fin de secado" seg={t.secadoSeg} onGuardar={(s) => marcar({ secadoSeg: s })} />
           <Momento label="1er crack (pop)" seg={t.crackSeg} onGuardar={(s) => marcar({ crackSeg: s })} />
-          <Momento label="Descarga" seg={t.descargaSeg} onGuardar={(s) => marcar({ descargaSeg: s })} />
+          <Momento label="Fin de curva" seg={t.descargaSeg} onGuardar={(s) => marcar({ descargaSeg: s })} />
         </div>
       )}
     </div>
@@ -149,7 +163,10 @@ function Momento({ label, seg, onGuardar }: { label: string; seg: number | null;
   )
 }
 
-/** Registrar la lectura de un minuto. Sigue al cronómetro; también se puede elegir el minuto a mano. */
+/**
+ * Lectura de cada minuto. Con el cronómetro andando se registra sola cuando marca el minuto, con la temperatura
+ * escrita y el aire y la llama elegidos. Sin cronómetro se elige el minuto y se registra a mano.
+ */
 function Captura({ t, completas, api }: { t: Tostion; completas: Lectura[]; api: TostionesApi }) {
   const id = useId()
   const [ahora, setAhora] = useState(Date.now())
@@ -160,94 +177,134 @@ function Captura({ t, completas, api }: { t: Tostion; completas: Lectura[]; api:
     return () => clearInterval(reloj)
   }, [corriendo])
 
+  const transcurrido = corriendo ? segundosDesde(t.iniciadaAt!, ahora) : 0
+  // Último minuto que marcó el cronómetro; se va llenando el siguiente.
+  const marca = Math.min(MINUTO_MAXIMO, Math.floor(transcurrido / 60))
   const ultimo = completas.length ? completas[completas.length - 1].segundo / 60 : -1
-  const automatico = corriendo
-    ? Math.min(MINUTO_MAXIMO, Math.floor(segundosDesde(t.iniciadaAt!, ahora) / 60))
-    : Math.min(MINUTO_MAXIMO, Math.floor(ultimo) + 1)
   const [elegido, setElegido] = useState<number | null>(null)
-  const minuto = elegido ?? automatico
+  const minuto = corriendo ? Math.min(MINUTO_MAXIMO, marca + 1) : elegido ?? Math.min(MINUTO_MAXIMO, Math.floor(ultimo) + 1)
 
   const [grano, setGrano] = useState('')
-  const [tambor, setTambor] = useState('')
   const [aire, setAire] = useState<number | null>(null)
   const [llama, setLlama] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [guardando, setGuardando] = useState(false)
 
-  // Aire y llama vigentes en ese minuto: los de la última lectura anterior, o los iniciales.
-  const previa = [...completas].reverse().find((l) => l.segundo <= minuto * 60)
-  const aireVigente = previa?.aire ?? t.aireInicial
-  const llamaVigente = previa?.llama ?? t.llamaInicial
+  // Aire y llama vigentes en un minuto: los de la última lectura anterior, o los iniciales.
+  const previa = (m: number) => [...completas].reverse().find((l) => l.segundo <= m * 60)
+  const aireVigente = previa(minuto)?.aire ?? t.aireInicial
+  const llamaVigente = previa(minuto)?.llama ?? t.llamaInicial
   const yaHay = completas.find((l) => l.segundo === minuto * 60)
+
+  /** Temperatura escrita: null si está vacía, NaN si no es válida. */
+  function leerGrano() {
+    const g = parseKg(grano)
+    return g !== null && (isNaN(g) || g < -50 || g > 400) ? NaN : g
+  }
+
+  async function guardar(m: number, g: number | null) {
+    const p = previa(m)
+    const lectura = { segundo: m * 60, tempGrano: g, tempTambor: null, aire: aire ?? p?.aire ?? t.aireInicial, llama: llama ?? p?.llama ?? t.llamaInicial }
+    // Se limpia antes de guardar: lo que se escriba mientras tanto queda para el minuto siguiente.
+    setGrano(''); setAire(null); setLlama(null); setError(null)
+    setGuardando(true)
+    await api.ejecutar(() => guardarLectura(t.id, lectura))
+    setGuardando(false)
+  }
+
+  // Cuando el cronómetro marca un minuto nuevo se registra lo escrito. Si no hay nada, ese minuto queda sin lectura.
+  const marcaPrevia = useRef(marca)
+  useEffect(() => {
+    if (!corriendo || marca <= marcaPrevia.current) { marcaPrevia.current = marca; return }
+    marcaPrevia.current = marca
+    const g = leerGrano()
+    if (Number.isNaN(g)) return setError(`No se registró el minuto ${marca}: temperatura no válida. Ej: 185,5`)
+    if (g === null && aire === null && llama === null) return
+    void guardar(marca, g)
+  })
 
   async function registrar(e: FormEvent) {
     e.preventDefault()
-    const g = parseKg(grano), tb = parseKg(tambor)
-    const fuera = (v: number | null) => v !== null && (isNaN(v) || v < -50 || v > 400)
-    if (g === null && tb === null) return setError('Escribe la temperatura del grano o del tambor.')
-    if (fuera(g) || fuera(tb)) return setError('Temperatura no válida. Ej: 185,5')
-    setGuardando(true)
-    await api.ejecutar(() => guardarLectura(t.id, {
-      segundo: minuto * 60, tempGrano: g, tempTambor: tb, aire: aire ?? aireVigente, llama: llama ?? llamaVigente,
-    }))
-    setGuardando(false)
-    setGrano(''); setTambor(''); setAire(null); setLlama(null); setError(null)
-    // A mano (sin cronómetro) se pasa al minuto siguiente; con cronómetro vuelve a seguirlo.
-    setElegido(corriendo ? null : Math.min(MINUTO_MAXIMO, minuto + 1))
+    if (corriendo) return
+    const g = leerGrano()
+    if (g === null) return setError('Escribe la temperatura del grano.')
+    if (Number.isNaN(g)) return setError('Temperatura no válida. Ej: 185,5')
+    await guardar(minuto, g)
+    setElegido(Math.min(MINUTO_MAXIMO, minuto + 1))
     document.getElementById(`${id}-grano`)?.focus()
   }
 
   return (
     <form onSubmit={(e) => void registrar(e)} className="flex flex-col gap-4 rounded-[14px] border-2 border-verde-salvia bg-panel p-4 sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h4 className="m-0 text-lg font-bold text-esmeralda-oscuro">Registrar minuto {minuto}</h4>
-        <div className="flex items-center gap-1" role="group" aria-label="Minuto">
-          <button type="button" aria-label="Minuto anterior" onClick={() => setElegido(Math.max(0, minuto - 1))}
-            className="flex h-12 w-12 items-center justify-center rounded-xl border border-verde-salvia bg-white"><Icon name="menos" size={22} /></button>
-          <span className="w-12 text-center font-display text-2xl font-bold tabular-nums">{minuto}</span>
-          <button type="button" aria-label="Minuto siguiente" onClick={() => setElegido(Math.min(MINUTO_MAXIMO, minuto + 1))}
-            className="flex h-12 w-12 items-center justify-center rounded-xl border border-verde-salvia bg-white"><Icon name="mas" size={22} /></button>
-        </div>
+        <h4 className="m-0 text-lg font-bold text-esmeralda-oscuro">Minuto {minuto}</h4>
+        {!corriendo && (
+          <div className="flex items-center gap-1" role="group" aria-label="Minuto">
+            <button type="button" aria-label="Minuto anterior" onClick={() => setElegido(Math.max(0, minuto - 1))}
+              className="flex h-12 w-12 items-center justify-center rounded-xl border border-verde-salvia bg-white"><Icon name="menos" size={22} /></button>
+            <span className="w-12 text-center font-display text-2xl font-bold tabular-nums">{minuto}</span>
+            <button type="button" aria-label="Minuto siguiente" onClick={() => setElegido(Math.min(MINUTO_MAXIMO, minuto + 1))}
+              className="flex h-12 w-12 items-center justify-center rounded-xl border border-verde-salvia bg-white"><Icon name="mas" size={22} /></button>
+          </div>
+        )}
       </div>
-      {elegido !== null && corriendo && (
-        <button type="button" onClick={() => setElegido(null)} className="-mt-2 self-start text-[15px] font-semibold text-esmeralda-oscuro underline">
-          Seguir el cronómetro (minuto {automatico})
-        </button>
+      {corriendo && marca < MINUTO_MAXIMO && (
+        <p className="m-0 -mt-2 text-[15px] text-pizarra">
+          Se registra solo cuando el cronómetro marque <strong className="tabular-nums">{minuto}:00</strong> (faltan {mmss(minuto * 60 - transcurrido)}).
+        </p>
       )}
       {yaHay && <p className="m-0 -mt-2 text-sm text-pizarra-suave">Este minuto ya tiene lectura: al registrar se reemplaza.</p>}
 
-      <div className="grid grid-cols-2 gap-3">
-        <Campo id={`${id}-grano`} label="Temp. grano" sufijo="°C" value={grano} onChange={(v) => { setGrano(v); setError(null) }} inputMode="decimal" grande />
-        <Campo id={`${id}-tambor`} label="Temp. tambor" sufijo="°C" value={tambor} onChange={(v) => { setTambor(v); setError(null) }} inputMode="decimal" grande />
-      </div>
+      <Campo id={`${id}-grano`} label="Temp. grano" sufijo="°C" value={grano} onChange={(v) => { setGrano(v); setError(null) }} inputMode="decimal" grande />
       <Opciones label="Aire" opciones={AIRES} valor={aire ?? aireVigente} sufijo="%" onElegir={setAire} />
       <Opciones label="Llama" opciones={LLAMAS} valor={llama ?? llamaVigente} sufijo="%" onElegir={setLlama} />
       {error && <FieldError>{error}</FieldError>}
-      <Button type="submit" size="xxl" disabled={guardando} className="font-bold">
-        {guardando ? 'Guardando…' : `Registrar minuto ${minuto}`}
-      </Button>
+      {!corriendo && (
+        <Button type="submit" size="xxl" disabled={guardando} className="font-bold">
+          {guardando ? 'Guardando…' : `Registrar minuto ${minuto}`}
+        </Button>
+      )}
     </form>
   )
 }
 
-function Resumen({ t, desarrollo, dtr }: { t: Tostion; desarrollo: number | null; dtr: number | null }) {
+function Resumen({ t }: { t: Tostion }) {
+  const fases = fasesTostion(t)
+  const marca = (s: number | null) => (s === null ? '—' : mmss(s))
   const datos: Array<[string, string]> = [
     ['Café verde', `${miles(t.gramosVerde)} g`],
     ['Carga', t.tempCarga === null ? '—' : `${kg(t.tempCarga)} °C`],
-    ['1er crack', t.crackSeg === null ? '—' : mmss(t.crackSeg)],
-    ['Descarga', t.descargaSeg === null ? '—' : mmss(t.descargaSeg)],
-    ['Desarrollo', desarrollo === null ? '—' : mmss(desarrollo)],
-    ['DTR', dtr === null ? '—' : `${dec(dtr, 1)} %`],
+    ['Fin de secado', marca(t.secadoSeg)],
+    ['1er crack', marca(t.crackSeg)],
+    ['Fin de curva', marca(t.descargaSeg)],
+  ]
+  const porFase: Array<[string, string, Fase]> = [
+    ['Secado', 'inicio → fin de secado', fases.secado],
+    ['Maillard', 'fin de secado → 1er crack', fases.maillard],
+    ['Desarrollo (DTR)', '1er crack → fin de curva', fases.desarrollo],
   ]
   return (
-    <dl className="m-0 grid grid-cols-3 gap-3 rounded-xl bg-rocio-claro p-3.5 sm:grid-cols-6">
-      {datos.map(([k, v]) => (
-        <div key={k}>
-          <dt className="text-[13px] text-pizarra-suave">{k}</dt>
-          <dd className="m-0 font-display text-lg font-bold tabular-nums">{v}</dd>
-        </div>
-      ))}
-    </dl>
+    <div className="flex flex-col gap-3 rounded-xl bg-rocio-claro p-3.5">
+      <dl className="m-0 grid grid-cols-3 gap-3 sm:grid-cols-5">
+        {datos.map(([k, v]) => (
+          <div key={k}>
+            <dt className="text-[13px] text-pizarra-suave">{k}</dt>
+            <dd className="m-0 font-display text-lg font-bold tabular-nums">{v}</dd>
+          </div>
+        ))}
+      </dl>
+      <dl aria-label="Fases respecto al tiempo total" className="m-0 grid grid-cols-1 gap-2 border-t border-linea pt-3 sm:grid-cols-3">
+        {porFase.map(([nombre, tramo, f]) => (
+          <div key={nombre} className="rounded-lg bg-white px-3 py-2">
+            <dt className="text-[13px] text-pizarra-suave"><span className="font-semibold text-pizarra">{nombre}</span> · {tramo}</dt>
+            <dd className="m-0 flex items-baseline justify-between gap-2 tabular-nums">
+              <span className="font-display text-2xl font-bold">{f.pct === null ? '—' : `${dec(f.pct, 1)} %`}</span>
+              <span className="text-[15px] text-pizarra-suave">{f.seg === null ? '' : mmss(f.seg)}</span>
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </div>
   )
 }
 
@@ -261,7 +318,6 @@ function TablaLecturas({ lecturas, editable, api }: { lecturas: Lectura[]; edita
           <tr className="bg-rocio-claro text-sm text-pizarra">
             <th className="px-3 py-2 font-semibold">Min</th>
             <th className="px-3 py-2 font-semibold">Grano °C</th>
-            <th className="px-3 py-2 font-semibold">Tambor °C</th>
             <th className="px-3 py-2 font-semibold">Aire %</th>
             <th className="px-3 py-2 font-semibold">Llama %</th>
             {editable && <th className="px-3 py-2"><span className="sr-only">Borrar</span></th>}
@@ -272,7 +328,6 @@ function TablaLecturas({ lecturas, editable, api }: { lecturas: Lectura[]; edita
             <tr key={l.id} className="border-t border-linea">
               <td className="px-3 py-2 font-semibold">{mmss(l.segundo)}</td>
               <td className="px-3 py-2">{l.tempGrano === null ? '—' : dec(l.tempGrano, 1)}</td>
-              <td className="px-3 py-2">{l.tempTambor === null ? '—' : dec(l.tempTambor, 1)}</td>
               <td className="px-3 py-2">{l.aire ?? '—'}</td>
               <td className="px-3 py-2">{l.llama ?? '—'}</td>
               {editable && (
@@ -321,7 +376,7 @@ function Eliminar({ t, api }: { t: Tostion; api: TostionesApi }) {
       <span className="text-[15px] font-semibold text-red-800">¿Eliminar esta tostión y sus lecturas? No se puede deshacer.</span>
       <div className="grid grid-cols-2 gap-2">
         <Button variant="outline" size="lg" onClick={() => setConfirmando(false)}>No</Button>
-        <Button variant="danger" size="lg" onClick={() => void api.ejecutar(() => eliminarTostion(t))}>Sí, eliminar</Button>
+        <Button variant="danger" size="lg" onClick={() => void api.eliminar(t)}>Sí, eliminar</Button>
       </div>
     </div>
   )

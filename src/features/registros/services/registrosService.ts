@@ -1,7 +1,7 @@
 import { supabase } from '../../../lib/supabase'
 import type { Database } from '../../../types/database'
 import type { Precios } from '../../configuracion/types'
-import type { Almacenamiento, Empaque, Estado, Etapa, Registro, RegistroDatos } from '../types'
+import type { Almacenamiento, Descripciones, Empaque, Estado, Etapa, Molienda, Presentacion, Registro, RegistroDatos } from '../types'
 
 type Fila = Database['public']['Tables']['lotes']['Row']
 
@@ -28,6 +28,7 @@ const aRegistro = (f: Fila): Registro => ({
   nDrip: f.n_drip,
   bolsasCliente: f.bolsas_cliente,
   gramosTostado: f.gramos_tostado,
+  gramosSobrante: f.gramos_sobrante,
   estado: f.estado,
   etapa: f.etapa,
   llegada: f.llegada,
@@ -37,9 +38,14 @@ const aRegistro = (f: Fila): Registro => ({
     ? { dias: f.almacen_dias, gramos: f.almacen_gramos, unidad: f.almacen_unidad, marcado: f.almacen_marcado, foto: f.almacen_foto }
     : null,
   precios: { lb: f.precio_lb, p340: f.precio_340, p500: f.precio_500, p2500: f.precio_2500, pDrip: f.precio_drip },
+  descripciones: f.descripciones ?? {},
+  fechasEtapas: f.fechas_etapas ?? {},
+  presentacion: f.presentacion,
+  molienda: f.molienda,
 })
 
 const aFila = (d: RegistroDatos, p: Precios) => ({
+  codigo: d.codigo.trim(),
   cliente_id: d.clienteId,
   fecha: d.fecha,
   cliente: d.cliente.trim(),
@@ -60,6 +66,7 @@ const aFila = (d: RegistroDatos, p: Precios) => ({
   n_drip: d.nDrip,
   bolsas_cliente: d.bolsasCliente,
   gramos_tostado: d.gramosTostado,
+  gramos_sobrante: d.gramosSobrante,
   precio_lb: p.lb,
   precio_340: p.p340,
   precio_500: p.p500,
@@ -79,17 +86,18 @@ export async function obtenerRegistro(id: string): Promise<Registro> {
   return aRegistro(data)
 }
 
-export async function crearRegistro(datos: RegistroDatos, precios: Precios): Promise<Registro> {
-  const { data, error } = await supabase.from('lotes').insert(aFila(datos, precios)).select().single()
+export async function crearRegistro(datos: RegistroDatos, precios: Precios, descripciones: Descripciones = {}): Promise<Registro> {
+  const { data, error } = await supabase.from('lotes')
+    .insert({ ...aFila(datos, precios), descripciones: limpiarDescripciones(descripciones) }).select().single()
   if (error) throw error
   return aRegistro(data)
 }
 
-/** Guarda cambios. Vuelve a "Pendiente" porque cambió lo que se va a enviar. */
-export async function actualizarRegistro(id: string, datos: RegistroDatos, precios: Precios): Promise<Registro> {
+/** Guarda cambios. Vuelve a "Pendiente" porque cambió lo que se va a enviar. Sin descripciones, deja las que había. */
+export async function actualizarRegistro(id: string, datos: RegistroDatos, precios: Precios, descripciones?: Descripciones): Promise<Registro> {
   const { data, error } = await supabase
     .from('lotes')
-    .update({ ...aFila(datos, precios), estado: 'Pendiente' })
+    .update({ ...aFila(datos, precios), ...(descripciones ? { descripciones: limpiarDescripciones(descripciones) } : {}), estado: 'Pendiente' })
     .eq('id', id)
     .select()
     .single()
@@ -112,11 +120,15 @@ export async function reabrirRegistro(id: string): Promise<void> {
 }
 
 /** Lo que se anota al pasar de etapa: el café a tostar al tostar; bolsas, drips y peso tostado al empacar. */
-export type DatosPaso =
+export type DatosPaso = (
   | { gramos: number }
-  | (Empaque & { gramosTostado: number })
+  | (Empaque & { gramosTostado: number; presentacion: Presentacion; molienda: Molienda | null })
   /** Al entregar: null si no requiere almacenamiento; si requiere, con la foto por subir. */
   | { almacenamiento: (Omit<Almacenamiento, 'foto'> & { foto: File }) | null }
+) & {
+  /** Todas las descripciones del lote, con la de la etapa nueva ya puesta. */
+  descripciones?: Descripciones
+}
 
 /** Sube la foto del almacenamiento a la carpeta "lotes" y devuelve su ruta. */
 async function subirFotoAlmacen(loteId: string, foto: File): Promise<string> {
@@ -127,8 +139,13 @@ async function subirFotoAlmacen(loteId: string, foto: File): Promise<string> {
   return ruta
 }
 
-const aCambios = async (id: string, d?: DatosPaso) => {
-  if (!d) return {}
+const aCambios = async (id: string, datos?: DatosPaso) => {
+  if (!datos) return {}
+  const { descripciones, ...d } = datos
+  return { ...(descripciones ? { descripciones: limpiarDescripciones(descripciones) } : {}), ...(await cambiosDelPaso(id, d)) }
+}
+
+const cambiosDelPaso = async (id: string, d: DatosPaso) => {
   if ('gramos' in d) return { gramos: d.gramos }
   if ('almacenamiento' in d) {
     const a = d.almacenamiento
@@ -138,13 +155,29 @@ const aCambios = async (id: string, d?: DatosPaso) => {
       almacen_foto: await subirFotoAlmacen(id, a.foto),
     }
   }
-  return { n340: d.n340, n500: d.n500, n2500: d.n2500, n_drip: d.nDrip, bolsas_cliente: d.bolsasCliente, gramos_tostado: d.gramosTostado }
+  return {
+    n340: d.n340, n500: d.n500, n2500: d.n2500, n_drip: d.nDrip, bolsas_cliente: d.bolsasCliente, gramos_tostado: d.gramosTostado,
+    gramos_sobrante: d.gramosSobrante,
+    // La base solo acepta molienda si es molido.
+    presentacion: d.presentacion, molienda: d.presentacion === 'Molido' ? d.molienda : null,
+  }
 }
 
 /** Mueve el lote de etapa. Al entregar guarda la hora; si se devuelve, la borra. */
 export async function cambiarEtapa(id: string, etapa: Etapa, datos?: DatosPaso): Promise<void> {
   const entregado_at = etapa === 'Entregado' ? new Date().toISOString() : null
   const { error } = await supabase.from('lotes').update({ ...(await aCambios(id, datos)), etapa, entregado_at }).eq('id', id)
+  if (error) throw error
+}
+
+/** Sin espacios de sobra y sin las etapas que quedaron vacías. */
+function limpiarDescripciones(d: Descripciones): Descripciones {
+  return Object.fromEntries(Object.entries(d).map(([k, v]) => [k, v?.trim() ?? '']).filter(([, v]) => v))
+}
+
+/** Guarda las descripciones de las etapas (desde el detalle del lote). */
+export async function guardarDescripciones(id: string, descripciones: Descripciones): Promise<void> {
+  const { error } = await supabase.from('lotes').update({ descripciones: limpiarDescripciones(descripciones) }).eq('id', id)
   if (error) throw error
 }
 

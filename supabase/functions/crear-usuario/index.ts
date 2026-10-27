@@ -1,4 +1,4 @@
-// Edge Function: un administrador crea un usuario (correo + contraseña) y le asigna un rol.
+// Edge Function: un administrador (o un rol con permiso de Administración) crea un usuario (correo + contraseña) y le asigna un rol.
 // Usa la llave de servicio, que solo existe aquí (Supabase la inyecta como variable de entorno), nunca en el navegador.
 // Desplegar: npx supabase functions deploy crear-usuario
 import { createClient } from 'npm:@supabase/supabase-js@2'
@@ -27,12 +27,12 @@ Deno.serve(async (req) => {
   const anon = Deno.env.get('SUPABASE_ANON_KEY')!
   const servicio = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
-  // 1. Quien llama debe ser administrador (se revisa con su propia sesión).
+  // 1. Quien llama debe poder usar Administración (se revisa con su propia sesión).
   const autorizacion = req.headers.get('Authorization') ?? ''
   const comoUsuario = createClient(url, anon, { global: { headers: { Authorization: autorizacion } } })
-  const { data: esAdmin, error: errAdmin } = await comoUsuario.rpc('es_admin')
+  const { data: administra, error: errAdmin } = await comoUsuario.rpc('administra')
   if (errAdmin) return responder(401, { error: 'Inicia sesión de nuevo.' })
-  if (!esAdmin) return responder(403, { error: 'Solo un administrador puede crear usuarios.' })
+  if (!administra) return responder(403, { error: 'Tu rol no puede crear usuarios.' })
 
   // 2. Datos del usuario nuevo.
   let pedido: Pedido
@@ -49,8 +49,12 @@ Deno.serve(async (req) => {
   if (!pedido.rolId) return responder(400, { error: 'Elige un rol.' })
 
   const admin = createClient(url, servicio, { auth: { persistSession: false, autoRefreshToken: false } })
-  const { data: rol } = await admin.from('roles').select('id, nombre').eq('id', pedido.rolId).maybeSingle()
+  const { data: rol } = await admin.from('roles').select('id, nombre, administrador').eq('id', pedido.rolId).maybeSingle()
   if (!rol) return responder(400, { error: 'Ese rol ya no existe.' })
+  if (rol.administrador) {
+    const { data: esAdmin } = await comoUsuario.rpc('es_admin')
+    if (!esAdmin) return responder(403, { error: 'Solo un administrador puede crear usuarios con el rol Administrador.' })
+  }
 
   // 3. Crea el usuario (ya confirmado: entra con esa contraseña). El perfil lo crea un trigger.
   const { data: creado, error: errCrear } = await admin.auth.admin.createUser({ email: correo, password: clave, email_confirm: true })

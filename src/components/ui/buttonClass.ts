@@ -1,6 +1,6 @@
 import { cx } from '../../lib/cx'
 
-export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'danger' | 'dangerOutline' | 'link'
+export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'danger' | 'dangerOutline' | 'link' | 'claro' | 'aviso'
 export type ButtonSize = 'sm' | 'md' | 'lg' | 'xl' | 'xxl'
 
 const variantes: Record<ButtonVariant, string> = {
@@ -10,6 +10,9 @@ const variantes: Record<ButtonVariant, string> = {
   danger: 'bg-peligro text-white hover:bg-red-800 font-semibold',
   dangerOutline: 'bg-white text-peligro border border-red-200 hover:bg-red-50',
   link: 'bg-transparent text-esmeralda-oscuro font-semibold hover:text-esmeralda hover:underline',
+  /** Sobre fondo oscuro (el cronómetro). */
+  claro: 'bg-white text-verde-botella hover:bg-verde-menta font-bold disabled:bg-white/60 disabled:text-verde-botella/70',
+  aviso: 'bg-amber-400 text-bosque hover:bg-amber-300 font-bold',
 }
 
 const tamanos: Record<ButtonSize, string> = {

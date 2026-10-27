@@ -4,7 +4,7 @@ import { OptionGroup } from '../../../../components/ui/OptionGroup'
 import { TextInput } from '../../../../components/ui/TextInput'
 import type { RegistroFormApi } from '../../hooks/useRegistroForm'
 import { PAGOS, PROCESOS } from '../../types'
-import { parseG, parseKg } from '../../../../lib/format'
+import { parseKg, parseKgAG } from '../../../../lib/format'
 import { DatosAnteriores } from './DatosAnteriores'
 import { GramosInput } from './GramosInput'
 import { Merma } from './Merma'
@@ -26,7 +26,7 @@ export function CafeCampos({ f }: { f: RegistroFormApi }) {
       <fieldset className="m-0 flex flex-col gap-4 border-0 p-0">
         <legend className="mb-4 p-0 text-lg font-bold">Café recibido</legend>
         <OptionGroup label="Proceso" options={PROCESOS} value={form.proceso}
-          onChange={(v) => set({ proceso: v })} gridClassName="grid-cols-2 sm:grid-cols-4" />
+          onChange={(v) => set({ proceso: v })} gridClassName="grid-cols-2 sm:grid-cols-3" />
         <Field label="Kilos recibidos" htmlFor="kilos" error={errores.kilos}>
           <div className="relative max-w-[260px]">
             <TextInput id="kilos" inputMode="decimal" placeholder="0" value={form.kilos} error={errores.kilos} className="pr-12"
@@ -54,7 +54,7 @@ export function CafeCampos({ f }: { f: RegistroFormApi }) {
       {pideGramos && (
         <GramosInput id="gramos" value={form.gramos} error={errores.gramos} aviso={avisoCantidad} librasTxt={cobro?.librasTxt}
           onChange={(v) => { set({ gramos: v }); tocar('gramos') }} onBlur={() => tocar('gramos')}>
-          <Merma r={{ kilos: parseKg(form.kilos) ?? 0, gramos: parseG(form.gramos), llegada: f.llegada, proceso: form.proceso }} />
+          <Merma r={{ kilos: parseKg(form.kilos) ?? 0, gramos: parseKgAG(form.gramos), llegada: f.llegada, proceso: form.proceso }} />
         </GramosInput>
       )}
     </>

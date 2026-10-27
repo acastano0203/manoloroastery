@@ -5,7 +5,7 @@ import type { Lectura, Tostion } from '../types'
 import { mmss } from '../utils'
 
 interface Props {
-  t: Pick<Tostion, 'crackSeg' | 'descargaSeg'>
+  t: Pick<Tostion, 'secadoSeg' | 'crackSeg' | 'descargaSeg'>
   /** Lecturas ya completas (aire y llama arrastrados), en orden. */
   lecturas: Lectura[]
   /** Último minuto del eje x. */
@@ -16,12 +16,12 @@ interface Props {
 const VW = 640, M = { izq: 40, der: 64, arr: 22, abj: 26 }, HT = 240, HA = 92
 const ancho = VW - M.izq - M.der
 
-/** Curva de temperatura (grano y tambor) y, debajo, aire y llama. Al pasar el dedo o el mouse muestra los valores de ese minuto. */
+/** Curva de temperatura del grano y, debajo, aire y llama. Al pasar el dedo o el mouse muestra los valores de ese minuto. */
 export function CurvaGrafica({ t, lecturas, minutos }: Props) {
   const idTitulo = useId()
   const [foco, setFoco] = useState<Lectura | null>(null)
 
-  const temps = lecturas.flatMap((l) => [l.tempGrano, l.tempTambor]).filter((v): v is number => v !== null)
+  const temps = lecturas.map((l) => l.tempGrano).filter((v): v is number => v !== null)
   const tMin = temps.length ? Math.max(0, Math.floor(Math.min(...temps) / 50) * 50 - 50) : 0
   const tMax = temps.length ? Math.max(250, Math.ceil(Math.max(...temps) / 50) * 50) : 250
   const X = (seg: number) => M.izq + (seg / 60 / minutos) * ancho
@@ -30,8 +30,6 @@ export function CurvaGrafica({ t, lecturas, minutos }: Props) {
   const A = (v: number) => yA0 + HA - (v / 100) * HA
   const alto = yA0 + HA + 22
 
-  const serie = (k: 'tempGrano' | 'tempTambor') =>
-    lecturas.filter((l) => l[k] !== null).map((l) => [X(l.segundo), Y(l[k]!)] as const)
   const escalon = (k: 'aire' | 'llama') => {
     const pts: Array<readonly [number, number]> = []
     for (const l of lecturas) {
@@ -45,8 +43,8 @@ export function CurvaGrafica({ t, lecturas, minutos }: Props) {
   }
   const camino = (pts: ReadonlyArray<readonly [number, number]>) => pts.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`).join(' ')
 
-  const grano = serie('tempGrano'), tambor = serie('tempTambor')
-  const ultimo = (k: 'tempGrano' | 'tempTambor') => [...lecturas].reverse().find((l) => l[k] !== null)
+  const grano = lecturas.filter((l) => l.tempGrano !== null).map((l) => [X(l.segundo), Y(l.tempGrano!)] as const)
+  const ultimo = [...lecturas].reverse().find((l) => l.tempGrano !== null)
 
   function mover(e: PointerEvent<SVGRectElement>) {
     if (!lecturas.length) return
@@ -57,7 +55,8 @@ export function CurvaGrafica({ t, lecturas, minutos }: Props) {
   }
 
   const pasoMin = minutos > 15 ? 2 : 1
-  const marcas = [[t.crackSeg, '1er crack', 0], [t.descargaSeg, 'Descarga', 12]] as const
+  // Cada marca en su renglón para que no se pisen si quedan cerca.
+  const marcas = [[t.secadoSeg, 'Fin de secado', 0], [t.crackSeg, '1er crack', 12], [t.descargaSeg, 'Fin de curva', 24]] as const
 
   return (
     <figure className="m-0 flex flex-col gap-2" aria-labelledby={idTitulo}>
@@ -65,7 +64,6 @@ export function CurvaGrafica({ t, lecturas, minutos }: Props) {
         <span className="font-semibold">Curva de temperatura (°C)</span>
         <span className="flex items-center gap-4 text-sm text-pizarra">
           <Leyenda color={COLORES.grano.hex} texto="Grano" />
-          <Leyenda color={COLORES.tambor.hex} texto="Tambor" />
           <Leyenda color={COLORES.aire.hex} texto="Aire" />
           <Leyenda color={COLORES.llama.hex} texto="Llama" />
         </span>
@@ -91,21 +89,16 @@ export function CurvaGrafica({ t, lecturas, minutos }: Props) {
                 textAnchor={X(seg) > VW - M.der - 90 ? 'end' : 'start'} fill="var(--color-pizarra)">{nombre} {mmss(seg)}</text>
             </g>
           ))}
-          <path d={camino(tambor)} fill="none" stroke={COLORES.tambor.hex} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
           <path d={camino(grano)} fill="none" stroke={COLORES.grano.hex} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
-          {[...tambor.map((p) => ['t', p] as const), ...grano.map((p) => ['g', p] as const)].map(([k, [x, y]]) => (
-            <circle key={`${k}${x}`} cx={x} cy={y} r={3.5} fill={k === 'g' ? COLORES.grano.hex : COLORES.tambor.hex} stroke="#fff" strokeWidth={1.5} />
+          {grano.map(([x, y]) => (
+            <circle key={x} cx={x} cy={y} r={3.5} fill={COLORES.grano.hex} stroke="#fff" strokeWidth={1.5} />
           ))}
-          {/* Etiquetas directas al final de cada línea */}
-          {(['tempTambor', 'tempGrano'] as const).map((k) => {
-            const l = ultimo(k)
-            if (!l) return null
-            return (
-              <text key={k} x={X(l.segundo) + 7} y={Y(l[k]!) + 4} fontSize={11} fontWeight={700} fill="var(--color-bosque)">
-                {k === 'tempGrano' ? 'Grano' : 'Tambor'} {dec(l[k]!, 0)}°
-              </text>
-            )
-          })}
+          {/* Etiqueta directa al final de la línea */}
+          {ultimo && (
+            <text x={X(ultimo.segundo) + 7} y={Y(ultimo.tempGrano!) + 4} fontSize={11} fontWeight={700} fill="var(--color-bosque)">
+              Grano {dec(ultimo.tempGrano!, 0)}°
+            </text>
+          )}
 
           {/* Aire y llama */}
           <text x={M.izq} y={yA0 - 10} fontSize={12} fontWeight={700} fill="var(--color-bosque)">Aire y llama (%)</text>
@@ -128,7 +121,6 @@ export function CurvaGrafica({ t, lecturas, minutos }: Props) {
             style={X(foco.segundo) / VW > 0.6 ? { right: `${100 - (X(foco.segundo) / VW) * 100 + 2}%` } : { left: `${(X(foco.segundo) / VW) * 100 + 2}%` }}>
             <div className="font-bold tabular-nums">Minuto {mmss(foco.segundo)}</div>
             <Fila color={COLORES.grano.hex} k="Grano" v={foco.tempGrano === null ? '—' : `${dec(foco.tempGrano, 1)} °C`} />
-            <Fila color={COLORES.tambor.hex} k="Tambor" v={foco.tempTambor === null ? '—' : `${dec(foco.tempTambor, 1)} °C`} />
             <Fila color={COLORES.aire.hex} k="Aire" v={foco.aire === null ? '—' : `${foco.aire} %`} />
             <Fila color={COLORES.llama.hex} k="Llama" v={foco.llama === null ? '—' : `${foco.llama} %`} />
           </div>

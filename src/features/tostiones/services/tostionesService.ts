@@ -20,6 +20,7 @@ const aTostion = (f: FilaTostion & { tostion_lecturas: FilaLectura[] | null }): 
   aireInicial: f.aire_inicial,
   llamaInicial: f.llama_inicial,
   iniciadaAt: f.iniciada_at,
+  secadoSeg: f.secado_seg,
   crackSeg: f.crack_seg,
   descargaSeg: f.descarga_seg,
   notas: f.notas,
@@ -55,6 +56,7 @@ export async function actualizarTostion(id: string, c: CambiosTostion): Promise<
   if (c.llamaInicial !== undefined) cambios.llama_inicial = c.llamaInicial
   if (c.iniciadaAt !== undefined) cambios.iniciada_at = c.iniciadaAt
   if (c.notas !== undefined) cambios.notas = c.notas
+  if (c.secadoSeg !== undefined) cambios.secado_seg = c.secadoSeg
   if (c.crackSeg !== undefined) cambios.crack_seg = c.crackSeg
   if (c.descargaSeg !== undefined) {
     cambios.descarga_seg = c.descargaSeg
@@ -100,7 +102,9 @@ export async function subirCurvaAutomatica(loteId: string, archivo: File, gramos
 
 /** Borra la tostión (con sus lecturas) y su PDF si tenía. */
 export async function eliminarTostion(t: Pick<Tostion, 'id' | 'archivo'>): Promise<void> {
-  const { error } = await supabase.from('tostiones').delete().eq('id', t.id)
+  const { data, error } = await supabase.from('tostiones').delete().eq('id', t.id).select('id')
   if (error) throw error
+  // Sin permiso, la base no da error: simplemente no borra nada.
+  if (!data?.length) throw new Error('No se pudo eliminar la tostión. Revisa que tengas permiso de curvas.')
   if (t.archivo) await supabase.storage.from('lotes').remove([t.archivo])
 }

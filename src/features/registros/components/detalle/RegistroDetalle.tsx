@@ -10,15 +10,27 @@ import { fecha } from '../../../../lib/format'
 import { estaEntregado, yaEsta } from '../../etapas'
 import { usePermisos } from '../../../admin/hooks/usePermisos'
 import { useRegistros } from '../../hooks/useRegistros'
+import { construirReporteLote } from '../../services/reportePdf'
 import type { Registro } from '../../types'
 import { calcularCobro, esEditable, registroACsv } from '../../utils'
 import { AvisoRegistros } from '../AvisoRegistros'
 import { CobroResumen } from './CobroResumen'
 import { AlmacenamientoDetalle } from './AlmacenamientoDetalle'
 import { DatosRegistro } from './DatosRegistro'
+import { DescripcionesEtapas } from './DescripcionesEtapas'
 import { EstadoEnvio } from './EstadoEnvio'
 import { EtapaPanel } from './EtapaPanel'
 import { CurvaTostion } from '../../../tostiones/components/CurvaTostion'
+
+/** Descarga el reporte del lote en PDF. */
+function descargarPdf(r: Registro) {
+  const url = URL.createObjectURL(new Blob([construirReporteLote(r)], { type: 'application/pdf' }))
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${r.codigo}.pdf`
+  a.click()
+  setTimeout(() => URL.revokeObjectURL(url), 10_000)
+}
 
 function Eliminar({ r }: { r: Registro }) {
   const { eliminar } = useRegistros()
@@ -62,6 +74,7 @@ export function RegistroDetalle({ id }: { id: string }) {
         <Alert kind="neutral">Reabierto el {fecha(r.reabiertoAt.slice(0, 10), true)}. Ya estaba en contabilidad: después de modificarlo, envíalo otra vez.</Alert>
       )}
       <EtapaPanel r={r} />
+      <DescripcionesEtapas key={r.id} r={r} />
       {yaEsta(r, 'Tostado') && <CurvaTostion r={r} />}
       {estaEntregado(r) && <EstadoEnvio r={r} />}
       {estaEntregado(r) && <AlmacenamientoDetalle r={r} />}
@@ -79,6 +92,10 @@ export function RegistroDetalle({ id }: { id: string }) {
           <Icon name="descargar" size={20} />
           Exportar Excel/CSV
         </a>
+        <Button variant="outline" size="lg" onClick={() => descargarPdf(r)} className="flex-1">
+          <Icon name="descargar" size={20} />
+          Exportar PDF
+        </Button>
         {esEditable(r) && puede('nuevo_lote') && <Eliminar r={r} />}
       </div>
     </main>

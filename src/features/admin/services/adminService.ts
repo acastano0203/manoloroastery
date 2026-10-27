@@ -57,8 +57,12 @@ export interface NuevoUsuario {
 
 /** Crea un usuario con su rol, a través de la Edge Function "crear-usuario" (solo administradores). */
 export async function crearUsuario(u: NuevoUsuario): Promise<void> {
-  const { error } = await supabase.functions.invoke('crear-usuario', { body: u })
-  if (!error) return
+  const { data, error } = await supabase.functions.invoke('crear-usuario', { body: u })
+  if (!error) {
+    // Si la función responde otra cosa (p. ej. el código de ejemplo de Supabase), el usuario no se creó.
+    if (!data?.id) throw new Error('La función "crear-usuario" respondió, pero no creó el usuario. Revisa que tenga el código de supabase/functions/crear-usuario/index.ts.')
+    return
+  }
   // La función responde { error: "mensaje" }; si no se puede leer, un mensaje general.
   const respuesta = (error as { context?: Response }).context
   let mensaje: string | undefined

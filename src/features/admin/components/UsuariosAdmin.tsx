@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '../../auth/hooks/useAuth'
 import type { AdminApi } from '../hooks/useAdmin'
+import { usePermisos } from '../hooks/usePermisos'
 import { asignarRol, cambiarNombre } from '../services/adminService'
 import type { Perfil } from '../types'
 import { CrearUsuario } from './CrearUsuario'
@@ -30,6 +31,9 @@ export function UsuariosAdmin({ api }: { api: AdminApi }) {
 function FilaUsuario({ p, yo, api }: { p: Perfil; yo: boolean; api: AdminApi }) {
   const [nombre, setNombre] = useState(p.nombre ?? '')
   const etiqueta = p.correo ?? p.id
+  // Solo el Administrador pone o quita el rol Administrador (la base también lo impide).
+  const { esAdmin } = usePermisos()
+  const esDeAdmin = Boolean(api.roles.find((r) => r.id === p.rolId)?.administrador)
   return (
     <li className="flex flex-col gap-3 rounded-xl border border-linea bg-white p-3.5 sm:flex-row sm:items-center">
       <div className="flex min-w-0 flex-1 flex-col gap-1">
@@ -41,7 +45,7 @@ function FilaUsuario({ p, yo, api }: { p: Perfil; yo: boolean; api: AdminApi }) 
       </div>
       <label className="flex flex-col gap-1 sm:w-56">
         <span className="text-sm text-pizarra-suave">Rol</span>
-        <select value={p.rolId ?? ''} aria-label={`Rol de ${etiqueta}`}
+        <select value={p.rolId ?? ''} aria-label={`Rol de ${etiqueta}`} disabled={esDeAdmin && !esAdmin}
           onChange={(e) => {
             const rol = api.roles.find((r) => r.id === e.target.value)
             void api.ejecutar(() => asignarRol(p.id, e.target.value || null), `${etiqueta} ahora es ${rol?.nombre ?? 'sin rol'}.`)
@@ -50,7 +54,7 @@ function FilaUsuario({ p, yo, api }: { p: Perfil; yo: boolean; api: AdminApi }) 
             ? 'h-12 rounded-[10px] border border-verde-salvia bg-white px-3 text-[16px] font-semibold'
             : 'h-12 rounded-[10px] border-2 border-amber-400 bg-amber-50 px-3 text-[16px] font-semibold'}>
           <option value="">Sin rol (no ve nada)</option>
-          {api.roles.map((r) => <option key={r.id} value={r.id}>{r.nombre}</option>)}
+          {api.roles.map((r) => <option key={r.id} value={r.id} disabled={r.administrador && !esAdmin}>{r.nombre}</option>)}
         </select>
       </label>
     </li>

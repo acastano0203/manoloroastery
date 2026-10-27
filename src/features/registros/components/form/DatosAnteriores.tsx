@@ -1,5 +1,5 @@
 import { Card } from '../../../../components/ui/Card'
-import { dec, fecha, kg } from '../../../../lib/format'
+import { dec, fecha, kg, kgDeG } from '../../../../lib/format'
 import { yaEsta } from '../../etapas'
 import type { Registro } from '../../types'
 import { calcularMerma, calcularPerdidaTueste, capaTrilla, describirBolsas } from '../../utils'
@@ -31,11 +31,11 @@ export function DatosAnteriores({ r }: { r: Registro }) {
         <Dato label="Kilos recibidos" valor={`${kg(r.kilos)} kg`} />
         {r.humedad !== null && <Dato label="Humedad" valor={`${kg(r.humedad)} %`} />}
         {r.densidad !== null && <Dato label="Densidad del grano" valor={`${kg(r.densidad)} g/L`} />}
-        {pasoTostado && r.gramos !== null && <Dato label="Peso en almendra" valor={`${dec(r.gramos, 0)} g`} />}
+        {pasoTostado && r.gramos !== null && <Dato label="Peso en almendra" valor={`${kgDeG(r.gramos)} kg`} />}
         {pasoTostado && merma !== null && <Dato label={`Merma (sin ${capaTrilla(r.proceso)})`} valor={`${dec(merma, 1)} %`} />}
-        {pasoEmpaque && r.gramosTostado !== null && <Dato label="Peso del café tostado" valor={`${dec(r.gramosTostado, 0)} g`} />}
+        {pasoEmpaque && r.gramosTostado !== null && <Dato label="Peso del café tostado" valor={`${kgDeG(r.gramosTostado)} kg`} />}
         {pasoEmpaque && perdida !== null && <Dato label="Pérdida en el tueste" valor={`${dec(perdida, 1)} %`} />}
-        {pasoEmpaque && <Dato label="Bolsas y drips" valor={describirBolsas(r)} />}
+        {r.etapa !== 'Empacado' && <Dato label="Bolsas y drips" valor={describirBolsas(r)} />}
       </dl>
     </Card>
   )
