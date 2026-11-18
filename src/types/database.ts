@@ -79,6 +79,12 @@ export type Database = {
           almacen_foto: string | null
           almacen_unidad: 'g' | 'kg' | 'lb'
           reabierto_at: string | null
+          siigo_factura_id: string | null
+          siigo_factura: string | null
+          siigo_error: string | null
+          siigo_bolsas: Array<{ codigo: string; nombre: string; cantidad: number; precio: number }> | Partial<Record<'n340' | 'n500' | 'n2500' | 'nDrip', number>> | null
+          /** Bolsas y drips de Siigo elegidos al recibir o empacar. */
+          bolsas: Array<{ codigo: string; nombre: string; cantidad: number; precio: number }>
           /** Descripción de cada etapa: { "Trillado": "..." }. */
           descripciones: Partial<Record<Database['public']['Enums']['etapa_lote'], string>>
           /** Cuándo llegó a cada etapa (ISO). La anota un trigger al cambiar de etapa. */
@@ -138,6 +144,11 @@ export type Database = {
           almacen_foto?: string | null
           almacen_unidad?: 'g' | 'kg' | 'lb'
           reabierto_at?: string | null
+          siigo_factura_id?: string | null
+          siigo_factura?: string | null
+          siigo_error?: string | null
+          siigo_bolsas?: Array<{ codigo: string; nombre: string; cantidad: number; precio: number }> | Partial<Record<'n340' | 'n500' | 'n2500' | 'nDrip', number>> | null
+          bolsas?: Array<{ codigo: string; nombre: string; cantidad: number; precio: number }>
           descripciones?: Partial<Record<Database['public']['Enums']['etapa_lote'], string>>
           fechas_etapas?: Partial<Record<Database['public']['Enums']['etapa_lote'], string>>
           nivel_tueste?: Database['public']['Enums']['nivel_tueste'] | null
@@ -330,6 +341,14 @@ export type Database = {
           stock_500: number | null
           stock_2500: number | null
           stock_drip: number | null
+          siigo_cotizacion_id: number | null
+          siigo_vendedor_id: number | null
+          siigo_producto_tostion: string
+          siigo_consumidor_final: string
+          siigo_crear_clientes: boolean
+          siigo_direccion: string
+          siigo_departamento: string
+          siigo_ciudad: string
           created_at: string
           updated_at: string
         }
@@ -340,6 +359,14 @@ export type Database = {
           stock_500?: number | null
           stock_2500?: number | null
           stock_drip?: number | null
+          siigo_cotizacion_id?: number | null
+          siigo_vendedor_id?: number | null
+          siigo_producto_tostion?: string
+          siigo_consumidor_final?: string
+          siigo_crear_clientes?: boolean
+          siigo_direccion?: string
+          siigo_departamento?: string
+          siigo_ciudad?: string
           precio_lb?: number
           precio_340?: number
           precio_500?: number

@@ -26,10 +26,13 @@ const aRegistro = (f: Fila): Registro => ({
   n500: f.n500,
   n2500: f.n2500,
   nDrip: f.n_drip,
+  bolsas: Array.isArray(f.bolsas) ? f.bolsas : [],
   bolsasCliente: f.bolsas_cliente,
   gramosTostado: f.gramos_tostado,
   gramosSobrante: f.gramos_sobrante,
   estado: f.estado,
+  siigoFactura: f.siigo_factura,
+  siigoError: f.siigo_error,
   etapa: f.etapa,
   llegada: f.llegada,
   entregadoAt: f.entregado_at,
@@ -64,6 +67,7 @@ const aFila = (d: RegistroDatos, p: Precios) => ({
   n500: d.n500,
   n2500: d.n2500,
   n_drip: d.nDrip,
+  bolsas: d.bolsas ?? [],
   bolsas_cliente: d.bolsasCliente,
   gramos_tostado: d.gramosTostado,
   gramos_sobrante: d.gramosSobrante,
@@ -156,7 +160,7 @@ const cambiosDelPaso = async (id: string, d: DatosPaso) => {
     }
   }
   return {
-    n340: d.n340, n500: d.n500, n2500: d.n2500, n_drip: d.nDrip, bolsas_cliente: d.bolsasCliente, gramos_tostado: d.gramosTostado,
+    n340: d.n340, n500: d.n500, n2500: d.n2500, n_drip: d.nDrip, bolsas: d.bolsas ?? [], bolsas_cliente: d.bolsasCliente, gramos_tostado: d.gramosTostado,
     gramos_sobrante: d.gramosSobrante,
     // La base solo acepta molienda si es molido.
     presentacion: d.presentacion, molienda: d.presentacion === 'Molido' ? d.molienda : null,

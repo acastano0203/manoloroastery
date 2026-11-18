@@ -1,6 +1,6 @@
 import { cel, hoyISO, kg, kgDeG, parseG, parseKg, parseKgAG } from '../../lib/format'
 import type { TipoDoc } from '../clientes/types'
-import type { Pago, Proceso, Registro } from './types'
+import type { BolsaLote, Pago, Proceso, Registro } from './types'
 
 /** Estado del formulario: los números se guardan como texto tal cual se escriben. */
 export interface FormRegistro {
@@ -28,6 +28,8 @@ export interface FormRegistro {
   n500: number
   n2500: number
   nDrip: number
+  /** Bolsas y drips de Siigo. */
+  bolsas: BolsaLote[]
   bolsasCliente: boolean
   /** Peso del café tostado, en kilos (se guarda en gramos). */
   gramosTostado: string
@@ -42,7 +44,7 @@ export type ErroresForm = Partial<Record<CampoForm, string>>
 
 export const formVacio = (): FormRegistro => ({
   codigo: '', fecha: hoyISO(), clienteId: null, clienteNuevo: false, cliente: '', celular: '', factura: false, tipoDoc: 'CC',
-  numDoc: '', correo: '', pago: null, proceso: 'Pergamino', kilos: '', humedad: '', densidad: '', gramos: '', n340: 0, n500: 0, n2500: 0, nDrip: 0,
+  numDoc: '', correo: '', pago: null, proceso: 'Pergamino', kilos: '', humedad: '', densidad: '', gramos: '', n340: 0, n500: 0, n2500: 0, nDrip: 0, bolsas: [],
   bolsasCliente: false, gramosTostado: '', gramosSobrante: '', descripcion: '',
 })
 
@@ -51,7 +53,7 @@ export const formDesdeRegistro = (r: Registro): FormRegistro => ({
   factura: r.factura, tipoDoc: r.tipoDoc, numDoc: r.numDoc, correo: r.correo, pago: r.pago, proceso: r.proceso,
   kilos: kg(r.kilos), humedad: r.humedad === null ? '' : kg(r.humedad),
   densidad: r.densidad === null ? '' : kg(r.densidad), gramos: r.gramos === null ? '' : kgDeG(r.gramos), n340: r.n340, n500: r.n500, n2500: r.n2500,
-  nDrip: r.nDrip, bolsasCliente: r.bolsasCliente, gramosTostado: r.gramosTostado === null ? '' : kgDeG(r.gramosTostado),
+  nDrip: r.nDrip, bolsas: r.bolsas ?? [], bolsasCliente: r.bolsasCliente, gramosTostado: r.gramosTostado === null ? '' : kgDeG(r.gramosTostado),
   gramosSobrante: r.gramosSobrante === null ? '' : String(r.gramosSobrante),
   descripcion: r.descripciones.Recibido ?? '',
 })

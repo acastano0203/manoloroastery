@@ -76,8 +76,25 @@ supabase/migrations/   SQL de tablas y políticas
 scripts/               Prueba de migraciones (npm run test:db)
 ```
 
+## Cotización en Siigo
+
+Al pulsar **Enviar** en un lote entregado, la Edge Function `siigo` crea una **cotización** en Siigo (no una factura): las libras tostadas (gramos tostados ÷ 500, a 2 decimales) con el servicio de torrefacción (`STORRE`), y cada bolsa o drip del lote con su código y precio de Siigo. La forma de pago va escrita en la descripción de la torrefacción, porque la cotización no tiene medio de pago. La contadora la revisa en Siigo y la pasa a factura con **Facturar**; ahí se eligen el tipo de factura, los impuestos y el medio de pago, y se descuentan las bolsas del inventario de Siigo.
+
+**Bolsas y drips**: al recibir y al empacar se eligen de una lista desplegable con los productos de Siigo que llevan inventario, con su precio y lo que queda en Siigo. Se guardan en `lotes.bolsas` con el precio de ese momento. La app ya no tiene precios de bolsas ni bodega propia: todo eso es de Siigo. Los lotes de antes conservan sus bolsas por tamaño (340 g, 500 g, 2.500 g, drip); si se envía uno de esos, pide elegir las bolsas otra vez de la lista de Siigo.
+
+Un lote reabierto actualiza la misma cotización al reenviarlo (si Siigo no lo permite, crea otra que dice a cuál reemplaza), y reenviar no la duplica (`Idempotency-Key`). Si el cliente de un lote con factura no existe en Siigo, se crea con su nombre, documento, celular y correo, y con la dirección y ciudad (códigos DANE) de la configuración, porque Siigo las exige y la app no las pide.
+
+**Configuración › Cotización en Siigo**: solo lo fijo — el servicio de torrefacción y el cliente (consumidor final y datos para crear clientes). El comprobante de cotización y el vendedor se toman solos si en Siigo hay uno; si hay varios, ahí se elige cuál. Se guarda en `public.configuracion`.
+
+Solo el usuario API y la llave van como secretos de la función (nunca en el navegador ni en el código). La lista está en [supabase/functions/.env.example](supabase/functions/.env.example). Al cambiar el código de la función hay que publicarla:
+```bash
+npx supabase db push                 # aplica las migraciones nuevas
+npx supabase functions deploy siigo  # publica la función
+```
+
+Para que VS Code no marque errores de `Deno` en `supabase/functions`, instala la extensión **Deno** (`denoland.vscode-deno`, recomendada en `.vscode/extensions.json`) y Deno (`winget install DenoLand.Deno`). La carpeta ya está habilitada en `.vscode/settings.json`.
+
 ## Pendiente
 
-- **Siigo está simulado** (`src/features/configuracion/services/siigoService.ts`), igual que en el diseño: "Enviar" espera 1,5 s y marca el registro como enviado. Para conectarlo de verdad hay que crear una Edge Function de Supabase que guarde la llave de acceso como secreto y llame la API de Siigo.
 - **Datos de la tostadora en la remisión**: reemplaza `[NIT]`, `[CIUDAD]` y `[CELULAR DE LA TOSTADORA]` en `src/features/remision/negocio.ts`.
 - **Al publicar** (Vercel, Netlify…): configura que todas las rutas sirvan `index.html` (app de una sola página) y agrega las dos variables `VITE_SUPABASE_*`.

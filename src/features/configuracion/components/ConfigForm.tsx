@@ -7,48 +7,37 @@ import { PageHeading } from '../../../components/ui/PageHeading'
 import { mensajeError } from '../../../lib/errores'
 import { miles } from '../../../lib/format'
 import { useConfig } from '../hooks/useConfig'
-import type { Precios } from '../types'
-import { cambiosInventario, InventarioBolsas, type InventarioBorrador } from './InventarioBolsas'
 import { PrecioInput } from './PrecioInput'
+import { SiigoAjustes } from './SiigoAjustes'
 import { SiigoConexion } from './SiigoConexion'
 
-type Borrador = Record<keyof Precios, string>
-const aBorrador = (p: Precios): Borrador => ({ lb: miles(p.lb), p340: miles(p.p340), p500: miles(p.p500), p2500: miles(p.p2500), pDrip: miles(p.pDrip) })
 const num = (v: string) => Number(v.replace(/\D/g, '')) || 0
 
+/**
+ * Configuración: el precio por libra de tostión y la conexión con Siigo.
+ * Las bolsas y drips (referencias, precios e inventario) salen de Siigo: se eligen en cada lote.
+ */
 export function ConfigForm() {
   const { config, error, guardar } = useConfig()
-  const [borrador, setBorrador] = useState<Borrador | null>(null)
-  const [usuario, setUsuario] = useState('')
-  // Solo las cantidades que se escribieron: las demás muestran lo que hay ahora (la base las va descontando).
-  const [inventario, setInventario] = useState<InventarioBorrador>({})
+  const [lb, setLb] = useState<string | null>(null)
   const [msg, setMsg] = useState<{ kind: AlertKind; text: string } | null>(null)
   const [guardando, setGuardando] = useState(false)
 
   useEffect(() => {
-    if (config && !borrador) {
-      setBorrador(aBorrador(config.precios))
-      setUsuario(config.siigoUsuario)
-    }
-  }, [config, borrador])
+    if (config && lb === null) setLb(miles(config.precios.lb))
+  }, [config, lb])
 
   if (error && !config) return <main className="p-6"><Alert kind="error">{error}</Alert></main>
-  if (!config || !borrador) return <Loading />
-
-  const set = (k: keyof Precios) => (v: string) => {
-    setBorrador({ ...borrador, [k]: v })
-    setMsg(null)
-  }
+  if (!config || lb === null) return <Loading />
 
   async function onGuardar() {
-    if (!config || !borrador) return
-    const precios: Precios = { lb: num(borrador.lb), p340: num(borrador.p340), p500: num(borrador.p500), p2500: num(borrador.p2500), pDrip: num(borrador.pDrip) }
-    if (!precios.lb) return setMsg({ kind: 'error', text: 'El precio por libra debe ser mayor que 0.' })
+    if (!config || lb === null) return
+    const precio = num(lb)
+    if (!precio) return setMsg({ kind: 'error', text: 'El precio por libra debe ser mayor que 0.' })
     setGuardando(true)
     try {
-      await guardar({ ...config, precios, siigoUsuario: usuario }, cambiosInventario(inventario, config.inventario))
-      setInventario({})
-      setMsg({ kind: 'ok', text: 'Configuración guardada. Los nuevos precios aplican a los lotes nuevos.' })
+      await guardar({ ...config, precios: { ...config.precios, lb: precio } })
+      setMsg({ kind: 'ok', text: 'Precio guardado. Aplica a los lotes nuevos.' })
     } catch (e) {
       setMsg({ kind: 'error', text: mensajeError(e) })
     } finally {
@@ -59,26 +48,18 @@ export function ConfigForm() {
   return (
     <main className="mx-auto flex w-full max-w-[720px] flex-1 flex-col gap-6 px-4 pb-12 pt-6">
       <PageHeading title="Configuración" />
-      <Card title="Precios" className="gap-[18px]">
+      <Card title="Precio de la tostión" className="gap-[18px]">
         <div className="max-w-[260px]">
-          <PrecioInput id="plb" label="Precio por libra de tostión" value={borrador.lb} onChange={set('lb')} />
+          <PrecioInput id="plb" label="Precio por libra de tostión" value={lb} onChange={(v) => { setLb(v); setMsg(null) }} />
         </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <PrecioInput id="p340" label="Bolsa 340 g" value={borrador.p340} onChange={set('p340')} />
-          <PrecioInput id="p500" label="Bolsa 500 g" value={borrador.p500} onChange={set('p500')} />
-          <PrecioInput id="p2500" label="Bolsa 2.500 g" value={borrador.p2500} onChange={set('p2500')} />
-          <PrecioInput id="pDrip" label="Drip (unidad)" value={borrador.pDrip} onChange={set('pDrip')} />
-        </div>
-      </Card>
-      <InventarioBolsas inventario={config.inventario} borrador={inventario}
-        cambiar={(k, v) => { setInventario((b) => ({ ...b, [k]: v })); setMsg(null) }} />
-      <SiigoConexion usuario={usuario} onUsuario={(v) => { setUsuario(v); setMsg(null) }} />
-      <div className="flex flex-col gap-2.5">
-        <Button size="xxl" onClick={onGuardar} disabled={guardando} className="font-bold">
-          {guardando ? 'Guardando…' : 'Guardar cambios'}
+        <p className="m-0 text-sm text-pizarra-suave">Las bolsas y drips se eligen en cada lote de los productos de Siigo, con su precio e inventario de Siigo.</p>
+        <Button size="xl" onClick={onGuardar} disabled={guardando} className="font-bold">
+          {guardando ? 'Guardando…' : 'Guardar precio'}
         </Button>
-        {msg && <Alert kind={msg.kind} className="justify-center text-center">{msg.text}</Alert>}
-      </div>
+        {msg && <Alert kind={msg.kind}>{msg.text}</Alert>}
+      </Card>
+      <SiigoConexion />
+      <SiigoAjustes config={config} />
     </main>
   )
 }

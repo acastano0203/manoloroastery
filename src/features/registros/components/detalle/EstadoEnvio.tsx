@@ -16,13 +16,18 @@ const cajas: Record<Estado, { caja: string; punto: string; titulo: string }> = {
 
 function texto(r: Registro) {
   if (r.estado === 'Error') {
+    if (r.siigoError) return r.siigoError
     return r.factura && !r.numDoc
       ? 'Falta el número de documento para la factura. Edita el lote y reenvía.'
       : 'No se pudo enviar. Intenta de nuevo.'
   }
-  if (r.estado === 'Enviando') return 'Esperando respuesta.'
-  if (r.estado === 'Pendiente') return 'Falta enviarlo a contabilidad. Después se comparte la remisión.'
-  return 'Ya puedes compartir la remisión con el cliente.'
+  if (r.estado === 'Enviando') return 'Creando la cotización en Siigo.'
+  if (r.estado === 'Pendiente') {
+    return r.siigoFactura
+      ? `Se reabrió: al enviar se actualiza la cotización ${r.siigoFactura} en Siigo.`
+      : 'Falta enviar la cotización a Siigo. Después se comparte la remisión.'
+  }
+  return `${r.siigoFactura ? `Cotización ${r.siigoFactura} en Siigo, lista para que contabilidad la facture. ` : ''}Ya puedes compartir la remisión con el cliente.`
 }
 
 export function EstadoEnvio({ r }: { r: Registro }) {

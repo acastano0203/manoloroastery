@@ -11,6 +11,9 @@ function datosDe(r: Registro): DatosRemision {
   for (const b of BOLSAS) {
     if (r[b.n] > 0) lineas.push({ concepto: b.plural, detalle: `${r[b.n]} × ${money(r.precios[b.p])}`, valor: money(r[b.n] * r.precios[b.p]) })
   }
+  for (const b of r.bolsas ?? []) {
+    if (b.cantidad > 0) lineas.push({ concepto: b.nombre, detalle: `${b.cantidad} × ${money(b.precio)}`, valor: money(b.cantidad * b.precio) })
+  }
   // El sobrante va suelto y ya está en la tostión: se lista para que el cliente sepa que se le entrega.
   if (r.gramosSobrante) lineas.push({ concepto: 'Sobrante sin empacar', detalle: `${miles(r.gramosSobrante)} g sueltos`, valor: 'Incluido' })
   return {

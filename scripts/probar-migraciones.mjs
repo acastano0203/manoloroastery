@@ -47,7 +47,9 @@ for (const d of [['Ana', '2026-10-01', 'Efectivo', 12.5, 10000, 2, 0, 'Enviado']
 }
 const antes = await q(`select id, codigo, gramos, kilos, n340, n2500, pago, estado, fecha from registros order by numero`)
 
-for (const f of archivos.slice(1)) {
+// Las de limpieza (borran registros a propósito) se prueban al final, aparte: aquí se comprueba que las demás conservan los datos.
+const esLimpieza = (f) => f.includes('_limpiar_')
+for (const f of archivos.slice(1).filter((f) => !esLimpieza(f))) {
   console.log('Migración nueva:', f)
   await db.exec(readFileSync(join(dir, f), 'utf8'))
 }
@@ -254,6 +256,35 @@ await como(U)
 ok((await stock()).sd === 13, 'y el inventario se descuenta igual')
 await q(`delete from lotes where id = $1`, [b.id])
 ok((await stock()).sd === 20, 'al borrar el lote: los drips vuelven a la bodega')
+
+console.log('\nVenta en Siigo')
+const sl = await nuevoLote()
+ok(!!(await falla(`update lotes set siigo_factura_id = 'x' where id = $1`, [sl.id])), 'un usuario no cambia los datos de Siigo del lote')
+ok(!(await falla(`update lotes set kilos = 5 where id = $1`, [sl.id])), 'pero sí lo demás del lote')
+await db.exec(`reset role; select set_config('request.jwt.claim.sub', '', false);`)
+ok(!(await falla(`update lotes set siigo_factura_id = 'abc', siigo_factura = 'FV-1-9', siigo_bolsas = '{"n340": 1}' where id = $1`, [sl.id])),
+  'la Edge Function (sin sesión) sí los anota')
+
+console.log('\nBolsas de Siigo en el lote')
+const bl = await nuevoLote()
+const bolsas = JSON.stringify([{ codigo: 'ME05', nombre: 'BOLSA 340GR', cantidad: 2, precio: 1500 }])
+ok(!(await falla(`update lotes set bolsas = $2 where id = $1`, [bl.id, bolsas])), 'se guardan las bolsas de Siigo del lote')
+ok(!!(await falla(`update lotes set bolsas = '{"ME05": 2}' where id = $1`, [bl.id])), 'las bolsas son una lista')
+await q(`update lotes set estado = 'Enviado' where id = $1`, [bl.id])
+ok(!!(await falla(`update lotes set bolsas = '[]' where id = $1`, [bl.id])), 'enviado a Siigo: las bolsas ya no cambian')
+ok((await q(`select siigo_producto_tostion t from configuracion`))[0].t === 'STORRE', 'la torrefacción es STORRE por defecto')
+
+for (const f of archivos.filter(esLimpieza)) {
+  console.log(`\nLimpieza: ${f}`)
+  await db.exec(`reset role; select set_config('request.jwt.claim.sub', '', false);`)
+  await db.exec(readFileSync(join(dir, f), 'utf8'))
+  const [c] = await q(`select (select count(*) from lotes)::int l, (select count(*) from pagos)::int p,
+                              (select count(*) from tostiones)::int t, (select count(*) from clientes)::int k`)
+  ok(c.l === 0 && c.p === 0 && c.t === 0, 'borra lotes, pagos y tostiones')
+  ok(c.k > 0, 'conserva los clientes')
+  const n = await nuevoLote()
+  ok((await q(`select codigo from lotes where id = $1`, [n.id]))[0].codigo === 'L-0001', 'el consecutivo vuelve a L-0001')
+}
 
 console.log(fallas ? `\n${fallas} prueba(s) fallaron` : '\nTodas las pruebas pasaron')
 process.exit(fallas ? 1 : 0)

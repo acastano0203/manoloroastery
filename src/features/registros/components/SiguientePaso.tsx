@@ -83,7 +83,7 @@ export function PasoDialog({ r, etapa, moviendo, onCerrar, onConfirmar }: Dialog
   const [gramos, setGramos] = useState(r.gramos ? kgDeG(r.gramos) : '')
   const [intentado, setIntentado] = useState(false)
   const [empaque, setEmpaque] = useState<EmpaqueBorrador>({
-    n340: r.n340, n500: r.n500, n2500: r.n2500, nDrip: r.nDrip, bolsasCliente: r.bolsasCliente,
+    n340: r.n340, n500: r.n500, n2500: r.n2500, nDrip: r.nDrip, bolsas: r.bolsas ?? [], bolsasCliente: r.bolsasCliente,
     gramosTostado: r.gramosTostado ? kgDeG(r.gramosTostado) : '',
     gramosSobrante: r.gramosSobrante === null ? '' : String(r.gramosSobrante),
   })

@@ -1,0 +1,5 @@
+{
+  // Las Edge Functions de Supabase corren en Deno, no en Node: que el editor las revise con Deno.
+  "deno.enablePaths": ["supabase/functions"],
+  "deno.lint": true
+}

@@ -10,7 +10,7 @@ export const PERMISOS: ReadonlyArray<{ p: Permiso; nombre: string; detalle: stri
   { p: 'historial', nombre: 'Historial', detalle: 'Lotes enviados, remisiones y reabrir' },
   { p: 'reportes', nombre: 'Reportes', detalle: 'Kilos en proceso, atrasos y gráficas del período' },
   { p: 'clientes', nombre: 'Clientes', detalle: 'Ver y editar la lista de clientes' },
-  { p: 'configuracion', nombre: 'Configuración', detalle: 'Precios, inventario de bolsas y conexión con Siigo' },
+  { p: 'configuracion', nombre: 'Configuración', detalle: 'Precio de la tostión y conexión con Siigo' },
   { p: 'administracion', nombre: 'Administración', detalle: 'Usuarios y roles' },
 ]
 
@@ -22,7 +22,7 @@ export const MENUS: ReadonlyArray<{ menu: string; detalle: string; permisos: rea
   { menu: 'Registros', detalle: 'Lotes: tablero, crear lotes, curvas de tostión e historial', permisos: ['tablero', 'nuevo_lote', 'curvas', 'historial'] },
   { menu: 'Reportes', detalle: 'Kilos en proceso, atrasos y gráficas del período', permisos: ['reportes'] },
   { menu: 'Clientes', detalle: 'Ver y editar la lista de clientes', permisos: ['clientes'] },
-  { menu: 'Configuración', detalle: 'Precios, inventario de bolsas y conexión con Siigo', permisos: ['configuracion'] },
+  { menu: 'Configuración', detalle: 'Precio de la tostión y conexión con Siigo', permisos: ['configuracion'] },
   { menu: 'Administración', detalle: 'Crear usuarios, asignarles rol y armar roles', permisos: ['administracion'] },
 ]
 

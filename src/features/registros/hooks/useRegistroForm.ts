@@ -90,7 +90,7 @@ export function useRegistroForm(registroId?: string) {
         factura: cliente.factura, tipoDoc: cliente.tipoDoc, numDoc: cliente.numDoc, correo: cliente.correo,
         pago: form.pago!, ...(editaRecepcion
           ? { proceso: form.proceso, kilos: k!, humedad: parseKg(form.humedad), densidad: parseKg(form.densidad) }
-          : { proceso: existente!.proceso, kilos: existente!.kilos, humedad: existente!.humedad, densidad: existente!.densidad }), gramos: pideGramos ? g! : existente?.gramos ?? null, n340: form.n340, n500: form.n500, n2500: form.n2500, nDrip: form.nDrip,
+          : { proceso: existente!.proceso, kilos: existente!.kilos, humedad: existente!.humedad, densidad: existente!.densidad }), gramos: pideGramos ? g! : existente?.gramos ?? null, n340: form.n340, n500: form.n500, n2500: form.n2500, nDrip: form.nDrip, bolsas: form.bolsas,
         bolsasCliente: form.bolsasCliente, gramosTostado: pideBolsas ? parseKgAG(form.gramosTostado) : existente?.gramosTostado ?? null,
         gramosSobrante: pideBolsas ? parseG(form.gramosSobrante) : existente?.gramosSobrante ?? null,
       }

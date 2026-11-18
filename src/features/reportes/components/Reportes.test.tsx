@@ -20,7 +20,7 @@ const lote = (p: Partial<Registro>): Registro => ({
   celular: '3001234567', factura: false, tipoDoc: 'CC', numDoc: '', correo: '', pago: null, proceso: 'Pergamino',
   kilos: 10, humedad: null, densidad: null, gramos: null, n340: 0, n500: 0, n2500: 0, nDrip: 0, bolsasCliente: false, gramosTostado: null,
   gramosSobrante: null, estado: 'Pendiente', etapa: 'Recibido', llegada: 'Pergamino',
-  precios: { lb: 3000, p340: 1500, p500: 1800, p2500: 4000, pDrip: 2500 }, entregadoAt: null, reabiertoAt: null, almacenamiento: null,
+  precios: { lb: 3000, p340: 1500, p500: 1800, p2500: 4000, pDrip: 2500 }, entregadoAt: null, reabiertoAt: null, siigoFactura: null, siigoError: null, almacenamiento: null,
   descripciones: {}, fechasEtapas: {}, presentacion: null, molienda: null, ...p,
 })
 

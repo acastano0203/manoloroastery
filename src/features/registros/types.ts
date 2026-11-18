@@ -2,6 +2,10 @@ import type { AlertKind } from '../../components/ui/Alert'
 import type { Database } from '../../types/database'
 import type { DatosFactura } from '../clientes/types'
 import type { Precios } from '../configuracion/types'
+import type { BolsaLote } from '../../../supabase/functions/_shared/siigoVenta'
+
+/** Bolsa o drip de Siigo elegido en el lote, con el precio que tenía en Siigo. */
+export type { BolsaLote }
 
 type Enums = Database['public']['Enums']
 export type Estado = Enums['estado_envio']
@@ -17,7 +21,10 @@ export const PRESENTACIONES: readonly Presentacion[] = ['Grano', 'Molido']
 export const MOLIENDAS: readonly Molienda[] = ['Fino', 'Medio', 'Grueso']
 export const PROCESOS: readonly Proceso[] = ['Pergamino', 'Natural', 'Honey', 'Cofermentado', 'En almendra (en verde)']
 
+/** Bolsas y drips del lote. n340…nDrip son de los lotes de antes; los nuevos usan «bolsas» (productos de Siigo). */
 export interface CantidadBolsas {
+  /** Productos de Siigo. Vacío en los lotes de antes. */
+  bolsas?: BolsaLote[]
   n340: number
   n500: number
   n2500: number
@@ -59,6 +66,10 @@ export interface Registro extends RegistroDatos {
   id: string
   /** Estado de envío a contabilidad (Siigo), aparte de la etapa del lote. */
   estado: Estado
+  /** Cotización en Siigo (p. ej. C-1-123), null si todavía no se ha enviado. La contadora la pasa a factura allá. */
+  siigoFactura: string | null
+  /** Por qué falló el último envío a Siigo. */
+  siigoError: string | null
   etapa: Etapa
   /** Pergamino pasa por trilla; Verde se la salta. Vacío en registros viejos. */
   llegada: Llegada | null

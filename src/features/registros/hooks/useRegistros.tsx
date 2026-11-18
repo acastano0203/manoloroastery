@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { mensajeError } from '../../../lib/errores'
 import { suscribirCambios } from '../../../lib/realtime'
-import { enviarRegistroASiigo } from '../../configuracion/services/siigoService'
+import { enviarLoteASiigo } from '../../configuracion/services/siigoService'
 import { etapaAnterior, siguienteEtapa } from '../etapas'
 import { cambiarEstado, cambiarEtapa, eliminarRegistro, listarRegistros, obtenerRegistro, reabrirRegistro, type DatosPaso } from '../services/registrosService'
 import type { Aviso, Etapa, Registro } from '../types'
@@ -60,10 +60,11 @@ export function RegistrosProvider({ children }: { children: ReactNode }) {
       await recargar()
       const r = await obtenerRegistro(id)
       cliente = r.cliente
-      await enviarRegistroASiigo(r)
-      await cambiarEstado(id, 'Enviado')
-      setAviso({ kind: 'ok', text: `${r.cliente} enviado. La remisión está lista.`, registroId: id })
+      // La función crea la cotización en Siigo y deja el lote en Enviado (o en Error, con el motivo).
+      const { cotizacion } = await enviarLoteASiigo(id)
+      setAviso({ kind: 'ok', text: `${r.cliente}: cotización ${cotizacion} creada en Siigo. La remisión está lista.`, registroId: id })
     } catch (e) {
+      // Por si la función ni siquiera respondió (sin internet): que no quede en "Enviando".
       await cambiarEstado(id, 'Error').catch(() => undefined)
       setAviso({ kind: 'error', text: `${cliente ? cliente + ': ' : ''}no se pudo enviar. ${mensajeError(e)}` })
     } finally {

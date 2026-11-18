@@ -3,7 +3,10 @@ import type { Precios } from '../configuracion/types'
 import { pasaPorTrilla } from './etapas'
 import { UNIDADES, type CantidadBolsas, type Cobro, type Proceso, type Registro, type Unidad } from './types'
 
-/** Productos de empaque que se cobran por unidad. "bolsa": no se cobran si el cliente trae las suyas. */
+/**
+ * Tamaños fijos de bolsas de los lotes de antes (n340…nDrip, con los precios de la configuración de entonces).
+ * Los lotes nuevos eligen sus bolsas de los productos de Siigo (r.bolsas). "bolsa": no se cobran si el cliente trae las suyas.
+ */
 export const BOLSAS = [
   { n: 'n340', p: 'p340', label: '340 g', nombre: 'Bolsa 340 g', plural: 'Bolsas 340 g', bolsa: true },
   { n: 'n500', p: 'p500', label: '500 g', nombre: 'Bolsa 500 g', plural: 'Bolsas 500 g', bolsa: true },
@@ -21,8 +24,9 @@ export function calcularCobro(r: CantidadBolsas & { gramos: number | null; gramo
   const g = gBase && gBase > 0 ? gBase : 0
   const libras = g / 500
   const tostion = libras * precios.lb
-  const nb = BOLSAS.reduce((s, b) => s + r[b.n], 0)
-  const bolsas = BOLSAS.reduce((s, b) => s + r[b.n] * precios[b.p], 0)
+  const siigo = r.bolsas ?? []
+  const nb = BOLSAS.reduce((s, b) => s + r[b.n], 0) + siigo.reduce((s, b) => s + b.cantidad, 0)
+  const bolsas = BOLSAS.reduce((s, b) => s + r[b.n] * precios[b.p], 0) + siigo.reduce((s, b) => s + b.cantidad * b.precio, 0)
   const total = tostion + bolsas
   return {
     libras, tostion, bolsas, total, nb, base,
@@ -60,9 +64,12 @@ export function calcularMerma(r: Pick<Registro, 'kilos' | 'gramos' | 'llegada'>)
 /** Si la merma pasa del tope de su proceso (20 %, o 50 % en el natural). */
 export const mermaAlta = (merma: number | null, proceso: Proceso) => merma !== null && merma > mermaMaxima(proceso)
 
-/** "2 × 340 g · 5 × drip". Con bolsasCliente: "Sin bolsa (las trae el cliente)". */
+/** "2 × BOLSA 340GR CON VALVULA · 5 × BOLSA DRIPBAG". Con bolsasCliente: "Sin bolsa (las trae el cliente)". */
 export function describirBolsas(r: CantidadBolsas & { bolsasCliente?: boolean }) {
-  const partes = BOLSAS.filter((b) => r[b.n] > 0).map((b) => `${r[b.n]} × ${b.label}`)
+  const partes = [
+    ...BOLSAS.filter((b) => r[b.n] > 0).map((b) => `${r[b.n]} × ${b.label}`),
+    ...(r.bolsas ?? []).filter((b) => b.cantidad > 0).map((b) => `${b.cantidad} × ${b.nombre}`),
+  ]
   if (r.bolsasCliente) partes.unshift('Sin bolsa (las trae el cliente)')
   return partes.join(' · ') || 'Sin bolsas'
 }
@@ -81,11 +88,11 @@ export function registroACsv(r: Registro): string {
   const c = calcularCobro(r, r.precios)
   const filas = [
     ['Registro', 'Fecha', 'Cliente', 'Celular', 'Proceso', 'Kilos recibidos', 'Kilos en almendra', 'Libras', 'Tostión',
-      'Sin bolsa', 'Bolsas 340g', 'Bolsas 500g', 'Bolsas 2500g', 'Drips', 'Valor empaque', 'Kilos tostado',
+      'Sin bolsa', 'Bolsas 340g', 'Bolsas 500g', 'Bolsas 2500g', 'Drips', 'Bolsas y drips (Siigo)', 'Valor empaque', 'Kilos tostado',
       'Merma %', 'Pérdida en el tueste %', 'Almacenamiento', 'Días almacenado', 'Kilos almacenados', 'Cómo va marcado',
       'Total', 'Forma de pago', 'Estado'],
     [r.codigo, r.fecha, r.cliente, r.celular, r.proceso, r.kilos, r.gramos === null ? '' : kgDeG(r.gramos), c.libras.toFixed(2), Math.round(c.tostion),
-      r.bolsasCliente ? 'Sí' : 'No', r.n340, r.n500, r.n2500, r.nDrip, Math.round(c.bolsas), r.gramosTostado === null ? '' : kgDeG(r.gramosTostado),
+      r.bolsasCliente ? 'Sí' : 'No', r.n340, r.n500, r.n2500, r.nDrip, (r.bolsas ?? []).map((b) => `${b.cantidad} × ${b.codigo} ${b.nombre}`).join(' · '), Math.round(c.bolsas), r.gramosTostado === null ? '' : kgDeG(r.gramosTostado),
       porcentaje(calcularMerma(r)), porcentaje(calcularPerdidaTueste(r)),
       r.almacenamiento ? 'Sí' : 'No', r.almacenamiento?.dias ?? '', r.almacenamiento ? kgDeG(r.almacenamiento.gramos) : '', r.almacenamiento?.marcado ?? '',
       Math.round(c.total), r.pago, r.estado],

@@ -11,13 +11,23 @@ vi.mock('../hooks/useRegistros', () => ({ useRegistros: () => ctx }))
 // Permisos del rol en cada prueba (por defecto, todos).
 const permisos = { todos: true, lista: [] as string[] }
 vi.mock('../../admin/hooks/usePermisos', () => ({ usePermisos: () => ({ puede: (p: string) => permisos.todos || permisos.lista.includes(p) }) }))
+// Bolsas y drips de Siigo (la lista desplegable del empaque).
+const BOLSAS_SIIGO = [
+  { codigo: 'ME05', nombre: 'BOLSA 340GR CON VALVULA', precio: 1500, disponible: 120 },
+  { codigo: 'ME16', nombre: 'BOLSA DRIPBAG', precio: 2500, disponible: 8 },
+]
+vi.mock('../../configuracion/hooks/useBolsasSiigo', () => ({
+  useBolsasSiigo: () => ({ productos: BOLSAS_SIIGO, error: null, cargando: false, actualizar: vi.fn() }),
+}))
+const elegir = (ventana: HTMLElement, codigo: string) =>
+  fireEvent.change(within(ventana).getByLabelText('Agregar bolsa o drip de Siigo'), { target: { value: codigo } })
 
 let n = 0
 const lote = (p: Partial<Registro>): Registro => ({
   id: `id-${++n}`, codigo: `L-${String(n).padStart(4, '0')}`, clienteId: 'c', fecha: '2026-10-06', cliente: `Cliente ${n}`,
   celular: '3001234567', factura: false, tipoDoc: 'CC', numDoc: '', correo: '', pago: null, proceso: 'Pergamino',
   kilos: 10, humedad: null, densidad: null, gramos: 5000, n340: 0, n500: 0, n2500: 0, nDrip: 0, bolsasCliente: false, gramosTostado: null, estado: 'Pendiente', etapa: 'Recibido', llegada: 'Pergamino',
-  precios: { lb: 3000, p340: 1500, p500: 1800, p2500: 4000, pDrip: 2500 }, entregadoAt: null, reabiertoAt: null, almacenamiento: null, descripciones: {}, fechasEtapas: {}, presentacion: null, molienda: null, gramosSobrante: null, ...p,
+  precios: { lb: 3000, p340: 1500, p500: 1800, p2500: 4000, pDrip: 2500 }, entregadoAt: null, reabiertoAt: null, siigoFactura: null, siigoError: null, almacenamiento: null, descripciones: {}, fechasEtapas: {}, presentacion: null, molienda: null, gramosSobrante: null, ...p,
 })
 
 const dibujar = (ui: React.ReactNode) => render(<MemoryRouter>{ui}</MemoryRouter>)
@@ -181,9 +191,11 @@ describe('Tablero de lotes por etapa', () => {
     const ventana = screen.getByRole('dialog', { name: 'Empacar' })
     expect(within(ventana).getByText('Sin bolsas')).toBeTruthy()
     fireEvent.click(within(ventana).getByRole('button', { name: 'Cambiar' }))
-    fireEvent.click(within(ventana).getByRole('button', { name: 'Agregar bolsa 340 g' }))
-    fireEvent.click(within(ventana).getByRole('button', { name: 'Agregar bolsa 340 g' }))
-    fireEvent.click(within(ventana).getByRole('button', { name: 'Agregar drip' }))
+    elegir(ventana, 'ME05')
+    fireEvent.click(within(ventana).getByRole('button', { name: 'Agregar bolsa 340gr con valvula' }))
+    elegir(ventana, 'ME16')
+    // Se ve cuántas hay en Siigo (8 drips: por agotarse).
+    expect(within(ventana).getByText(/Quedan 8 en Siigo/)).toBeTruthy()
 
     // Sin el peso tostado no avanza
     fireEvent.click(within(ventana).getByRole('button', { name: 'Pasar a Empacado' }))
@@ -202,10 +214,14 @@ describe('Tablero de lotes por etapa', () => {
     fireEvent.click(within(ventana).getByRole('button', { name: 'Medio' }))
     fireEvent.click(within(ventana).getByRole('button', { name: 'Pasar a Empacado' }))
     expect(ctx.avanzar).toHaveBeenCalledWith(r,
-      { n340: 2, n500: 0, n2500: 0, nDrip: 1, bolsasCliente: false, gramosTostado: 4200, gramosSobrante: null, presentacion: 'Molido', molienda: 'Medio' })
+      { n340: 0, n500: 0, n2500: 0, nDrip: 0, bolsasCliente: false, gramosTostado: 4200, gramosSobrante: null, presentacion: 'Molido', molienda: 'Medio',
+        bolsas: [
+          { codigo: 'ME05', nombre: 'BOLSA 340GR CON VALVULA', cantidad: 2, precio: 1500 },
+          { codigo: 'ME16', nombre: 'BOLSA DRIPBAG', cantidad: 1, precio: 2500 },
+        ] })
   })
 
-  it('sin bolsa: oculta las bolsas, las deja en 0 y conserva los drips', () => {
+  it('sin bolsa: quita las bolsas y se pueden agregar drips de Siigo', () => {
     const r = lote({ etapa: 'Tostado', gramos: 5000, n340: 3 })
     ctx.registros = [r]
     dibujar(<LotesPorEtapa />)
@@ -216,12 +232,13 @@ describe('Tablero de lotes por etapa', () => {
     fireEvent.click(within(ventana).getByRole('button', { name: 'Cambiar' }))
     fireEvent.click(within(ventana).getByRole('checkbox', { name: /Sin bolsa/ }))
     expect(within(ventana).queryByRole('button', { name: 'Agregar bolsa 340 g' })).toBeNull()
-    fireEvent.click(within(ventana).getByRole('button', { name: 'Agregar drip' }))
+    elegir(ventana, 'ME16')
     fireEvent.change(within(ventana).getByLabelText('Peso del café tostado'), { target: { value: '4,2' } })
     fireEvent.click(within(ventana).getByRole('button', { name: 'En grano' }))
     fireEvent.click(within(ventana).getByRole('button', { name: 'Pasar a Empacado' }))
     expect(ctx.avanzar).toHaveBeenCalledWith(r,
-      { n340: 0, n500: 0, n2500: 0, nDrip: 1, bolsasCliente: true, gramosTostado: 4200, gramosSobrante: null, presentacion: 'Grano', molienda: null })
+      { n340: 0, n500: 0, n2500: 0, nDrip: 0, bolsasCliente: true, gramosTostado: 4200, gramosSobrante: null, presentacion: 'Grano', molienda: null,
+        bolsas: [{ codigo: 'ME16', nombre: 'BOLSA DRIPBAG', cantidad: 1, precio: 2500 }] })
   })
 
   it('al empacar trae las bolsas anotadas al recibir y las conserva si no se cambian', () => {
@@ -235,7 +252,7 @@ describe('Tablero de lotes por etapa', () => {
     fireEvent.click(within(ventana).getByRole('button', { name: 'En grano' }))
     fireEvent.click(within(ventana).getByRole('button', { name: 'Pasar a Empacado' }))
     expect(ctx.avanzar).toHaveBeenCalledWith(r,
-      { n340: 0, n500: 2, n2500: 0, nDrip: 4, bolsasCliente: false, gramosTostado: 4200, gramosSobrante: null, presentacion: 'Grano', molienda: null })
+      { n340: 0, n500: 2, n2500: 0, nDrip: 4, bolsas: [], bolsasCliente: false, gramosTostado: 4200, gramosSobrante: null, presentacion: 'Grano', molienda: null })
   })
 
   it('el café tostado no puede pesar más que la almendra', () => {

@@ -6,7 +6,7 @@ import { PageHeading } from '../../../../components/ui/PageHeading'
 import { TextInput } from '../../../../components/ui/TextInput'
 import { useRegistros } from '../../hooks/useRegistros'
 import { useRegistroForm } from '../../hooks/useRegistroForm'
-import { BolsasRecepcion, BolsasSelector } from './BolsasSelector'
+import { BolsasEntrega, BolsasRecepcion, BolsasSelector } from './BolsasSelector'
 import { CafeCampos } from './CafeCampos'
 import { ClienteCampos } from './ClienteCampos'
 import { DescripcionCampo } from './DescripcionCampo'
@@ -51,6 +51,7 @@ export function RegistroForm({ registroId }: { registroId?: string }) {
           <DescripcionCampo id="descripcion" etapa="Recibido" value={f.form.descripcion} onChange={(v) => f.set({ descripcion: v })} opcional />
         )}
         {f.pideBolsas && <BolsasSelector f={f} />}
+        {f.existente?.etapa === 'Entregado' && <BolsasEntrega f={f} />}
       </main>
       <ResumenCobroBar f={f} />
     </>

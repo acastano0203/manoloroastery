@@ -154,7 +154,7 @@ function ConfirmarReabrir({ r, onCerrar }: { r: Registro; onCerrar: () => void }
         <ul className="m-0 flex flex-col gap-1.5 pl-5 text-[15px] text-pizarra">
           <li>Vuelve al tablero en <strong>Entregado</strong>, pendiente de enviar.</li>
           <li>Podrás editarlo o devolverlo a una etapa anterior.</li>
-          <li>Ya está en contabilidad: después de modificarlo hay que <strong>enviarlo otra vez</strong>. Si cambias el cobro, revisa la factura en Siigo.</li>
+          <li>Ya está en contabilidad: después de modificarlo hay que <strong>enviarlo otra vez</strong>. Al reenviarlo se actualiza su cotización en Siigo (si contabilidad ya la facturó, avísale).</li>
         </ul>
         <div className="grid grid-cols-[1fr_2fr] gap-2">
           <Button variant="outline" size="xl" onClick={onCerrar}>Cancelar</Button>

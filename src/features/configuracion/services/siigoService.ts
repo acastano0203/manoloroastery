@@ -1,19 +1,47 @@
-// SIMULACIÓN de la integración con Siigo (igual que en el diseño).
-// Para conectarla de verdad: crea una Edge Function de Supabase que reciba el id del registro,
-// lea la llave de acceso desde sus secretos (nunca desde el navegador) y llame la API de Siigo.
-// Luego reemplaza estas funciones por `supabase.functions.invoke('siigo-...')`.
+// Conexión con Siigo a través de la Edge Function "siigo" (supabase/functions/siigo): la llave de acceso vive en sus
+// secretos, nunca en el navegador. La función revisa los permisos con la sesión de quien llama.
 
-import type { Registro } from '../../registros/types'
+import { supabase } from '../../../lib/supabase'
+import type { ProductoBolsa } from '../../../../supabase/functions/_shared/siigoVenta'
 
-const esperar = (ms: number) => new Promise((r) => setTimeout(r, ms))
+export type { ProductoBolsa }
 
-export async function probarConexionSiigo(usuario: string, llave: string): Promise<void> {
-  if (!usuario.trim() || !llave.trim()) throw new Error('Completa el usuario API y la llave de acceso para probar.')
-  await esperar(1400)
+async function llamar<T>(cuerpo: Record<string, unknown>): Promise<T> {
+  const { data, error } = await supabase.functions.invoke('siigo', { body: cuerpo })
+  if (error) {
+    // La función responde { error } con el motivo; supabase-js lo deja en error.context (la respuesta).
+    const ctx = (error as { context?: Response }).context
+    const motivo = ctx && typeof ctx.json === 'function' ? await ctx.json().then((j) => j?.error).catch(() => null) : null
+    throw new Error(motivo || 'No se pudo conectar con Siigo. Revisa que la función «siigo» esté publicada.')
+  }
+  return data as T
 }
 
-/** Envía el registro a contabilidad. Lanza un error con el motivo si no se pudo. */
-export async function enviarRegistroASiigo(r: Registro): Promise<void> {
-  await esperar(1500)
-  if (r.factura && !r.numDoc) throw new Error('Falta el número de documento para la factura.')
+/** Prueba el usuario API y la llave guardados en los secretos de la función. */
+export async function probarConexionSiigo(): Promise<void> {
+  await llamar({ accion: 'probar' })
+}
+
+/** Crea (o actualiza, si se reabrió) la cotización del lote en Siigo. Lanza un error con el motivo si no se pudo. */
+export async function enviarLoteASiigo(loteId: string): Promise<{ cotizacion: string; total: number }> {
+  return llamar({ accion: 'enviar', loteId })
+}
+
+/** Bolsas y drips para elegir en el lote: productos de Siigo con inventario, su precio de venta y cuántas hay. */
+export async function listarBolsasSiigo(): Promise<ProductoBolsa[]> {
+  const r = await llamar<{ productos: ProductoBolsa[] }>({ accion: 'productos' })
+  return r.productos ?? []
+}
+
+interface ItemCatalogo { id?: number; code?: string; name?: string; active?: boolean; stock_control?: boolean }
+type ListaCatalogo = { datos: ItemCatalogo[]; error?: string }
+export interface CatalogoSiigo {
+  cotizaciones: ListaCatalogo
+  vendedores: ListaCatalogo
+  productos: ItemCatalogo[]
+}
+
+/** Opciones de Configuración › Siigo: comprobantes de cotización, vendedores y productos. */
+export async function consultarCatalogoSiigo(): Promise<CatalogoSiigo> {
+  return llamar({ accion: 'catalogo' })
 }
